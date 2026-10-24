@@ -92,7 +92,7 @@ export default async function FinancePage() {
           <CardBody>
             <ActionForm action={recordBankReceiptAction} className="space-y-3">
               <Field label="Amount" htmlFor="amount">
-                <Input id="amount" name="amount" required />
+                <Input id="amount" name="amount" inputMode="decimal" required />
               </Field>
               <Field label="Received on" htmlFor="receivedOn">
                 <Input id="receivedOn" name="receivedOn" type="date" required />

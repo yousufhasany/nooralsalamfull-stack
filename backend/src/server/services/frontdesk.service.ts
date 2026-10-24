@@ -1,6 +1,6 @@
 import { db } from "@/server/db/client";
 import type { PaymentCollectionMethod, PaymentSource } from "@/generated/prisma/enums";
-import { AppError } from "@/lib/errors";
+import { AppError, fieldError } from "@/lib/errors";
 import { D, type MoneyInput } from "@/lib/money";
 import { addDays, fromDate, todayIn, toDate } from "@/lib/dates";
 import { assertRoomFree, findAssignableRooms, lockRoomTypes, lockRooms } from "./availability.service";
@@ -75,7 +75,11 @@ export async function checkIn(input: CheckInInput) {
     }
 
     if (input.deposit && D(input.deposit.amount).greaterThan(0)) {
-      await recordPayment(tx, { reservationId: res.id, userId: input.userId, ...input.deposit, note: "Deposit at check-in" });
+      const due = await getReservationBalance(tx, res.id);
+      if (D(input.deposit.amount).greaterThan(due.balance)) {
+        throw fieldError("depositAmount", `Payment cannot be more than the balance of ${due.balance.toFixed(2)} ${res.currency}.`);
+      }
+      await recordPayment(tx, { reservationId: res.id, userId: input.userId, ...input.deposit, note: "Payment at check-in" });
     }
     await tx.reservation.update({ where: { id: res.id }, data: { status: "CHECKED_IN", checkedInAt: input.now ?? new Date() } });
     await audit({ userId: input.userId, action: "guest.checked_in", entity: "Reservation", entityId: res.id, before: { status: "CONFIRMED" }, after: { status: "CHECKED_IN", rooms: [...used] } }, tx);
@@ -104,13 +108,17 @@ export async function checkOut(input: CheckOutInput) {
     if (res.status !== "CHECKED_IN") throw new AppError("INVALID_STATE", "Only checked-in guests can be checked out.");
     await lockRooms(tx, res.rooms.map((r) => r.roomId).filter((x): x is string => !!x));
 
+    const due = await getReservationBalance(tx, res.id);
     if (input.payment && D(input.payment.amount).greaterThan(0)) {
+      if (D(input.payment.amount).greaterThan(due.balance)) {
+        throw fieldError("paymentAmount", `Payment cannot be more than the balance of ${due.balance.toFixed(2)} ${res.currency}.`);
+      }
       await recordPayment(tx, { reservationId: res.id, userId: input.userId, ...input.payment, note: "Payment at check-out" });
     }
     const bal = await getReservationBalance(tx, res.id);
     // OTA-collected bookings: what the OTA collected is already counted as paid, so only extras remain due here.
     if (bal.balance.greaterThan(0) && !input.allowOutstanding) {
-      throw new AppError("PAYMENT_FAILED", `An outstanding balance of ${bal.balance.toFixed(2)} ${res.currency} must be settled before check-out.`);
+      throw fieldError("paymentAmount", `An outstanding balance of ${bal.balance.toFixed(2)} ${res.currency} must be settled before check-out.`);
     }
 
     const invoice = await generateInvoice(res.id, input.userId, tx);

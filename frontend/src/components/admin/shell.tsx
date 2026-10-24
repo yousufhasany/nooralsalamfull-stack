@@ -1,6 +1,7 @@
 import { logoutAction } from "@/app/(admin)/admin/actions/auth";
 import { SidebarNav } from "@/components/admin/sidebar-nav";
 import { LocaleSwitch } from "@/components/admin/locale-switch";
+import { Toaster } from "@/components/admin/toaster";
 import { adminMessages } from "@/i18n/admin";
 import type { SessionUser } from "@/server/auth/session";
 import { ROLE_LABELS } from "@/server/auth/permissions";
@@ -46,6 +47,7 @@ export function AdminShell({ user, children }: { user: SessionUser; children: Re
           {children}
         </main>
       </div>
+      <Toaster labels={{ success: t.toastSuccess, error: t.toastError, saved: t.toastSaved, actionDone: t.toastActionDone, close: t.close }} />
     </div>
   );
 }

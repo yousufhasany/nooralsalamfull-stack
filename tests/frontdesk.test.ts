@@ -73,6 +73,27 @@ describe("check-in / check-out", () => {
     expect(await db.housekeepingTask.count({ where: { roomId, status: { in: ["OPEN", "IN_PROGRESS"] } } })).toBe(1);
   });
 
+  it("counts a check-in payment and requires the rest at check-out", async () => {
+    const w = await createWorld({ rooms: 1, taxRate: "5" });
+    const r = await arrivingToday(w, 2);
+    await checkIn({
+      reservationId: r.id,
+      guestVerified: true,
+      deposit: { amount: "100.00", source: "HOTEL_CASH", collectionMethod: "HOTEL_COLLECTED" },
+    });
+    const stayed = await db.reservation.findUniqueOrThrow({ where: { id: r.id } });
+    expect(stayed.paidAmount.toString()).toBe("100");
+
+    await expect(checkOut({ reservationId: r.id })).rejects.toThrow(/outstanding balance/i);
+    await expect(
+      checkOut({ reservationId: r.id, payment: { amount: "100.00", source: "HOTEL_CASH", collectionMethod: "HOTEL_COLLECTED" } }),
+    ).rejects.toThrow(/outstanding balance/i);
+
+    await checkOut({ reservationId: r.id, payment: { amount: "530.00", source: "HOTEL_CASH", collectionMethod: "HOTEL_COLLECTED" } });
+    const payments = await db.payment.findMany({ where: { reservationId: r.id, status: "SUCCEEDED" } });
+    expect(payments.map((p) => p.amount.toString()).sort()).toEqual(["100", "530"]);
+  });
+
   it("early departure frees the remaining nights for sale", async () => {
     const w = await createWorld({ rooms: 1 });
     const r = await arrivingToday(w, 3);

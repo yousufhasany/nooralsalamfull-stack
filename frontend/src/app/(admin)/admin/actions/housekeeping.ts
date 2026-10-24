@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { adminAction } from "@/server/auth/action";
 import { AppError } from "@/lib/errors";
 import { openRoomCleaning, reviewCleaning, savePhotoCategory, saveSupplyLine, startCleaning, submitCleaning, uploadCleaningPhoto } from "@/server/services/housekeeping-clean.service";
-import { bool, opt, str } from "./form";
+import { amount, bool, opt, str } from "./form";
+import { flash } from "./flash";
 
 function refresh(taskId?: string) {
   revalidatePath("/admin/housekeeping");
@@ -19,7 +20,10 @@ export async function openRoomCleaningAction(formData: FormData) {
     refresh(taskId);
     return taskId;
   });
-  if (id.ok) redirect(`/admin/housekeeping/tasks/${id.data}`);
+  if (id.ok) {
+    await flash("Cleaning task opened.");
+    redirect(`/admin/housekeeping/tasks/${id.data}`);
+  }
   return id;
 }
 
@@ -51,7 +55,7 @@ export async function uploadCleaningPhotoAction(formData: FormData) {
 export async function saveSupplyAction(formData: FormData) {
   return adminAction("housekeeping.update", async (user) => {
     const id = str(formData, "taskId");
-    await saveSupplyLine({ taskId: id, itemId: str(formData, "itemId"), quantity: str(formData, "quantity"), userId: user.id, manage: user.permissions.includes("housekeeping.inspect") });
+    await saveSupplyLine({ taskId: id, itemId: str(formData, "itemId"), quantity: amount(formData, "quantity"), userId: user.id, manage: user.permissions.includes("housekeeping.inspect") });
     refresh(id);
   });
 }

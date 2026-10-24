@@ -9,8 +9,8 @@ import { lockRooms } from "./availability.service";
 import { enqueueInventorySync } from "./channel-queue.service";
 
 export const roomInputSchema = z.object({
-  number: z.string().trim().min(1, "Room number is required").max(20),
-  floor: z.coerce.number().int().min(-5).max(200).default(0),
+  number: z.string().trim().min(1, "Room number is required").max(20).transform((v) => v.toUpperCase()),
+  floor: z.coerce.number().int("Floor must be a whole number").min(0, "Floor cannot be negative").max(200).default(0),
   roomTypeId: z.string().min(1),
   notes: z.string().trim().max(500).optional().default(""),
   isActive: z.coerce.boolean().optional().default(true),
@@ -19,12 +19,18 @@ export const roomInputSchema = z.object({
 export async function createRoom(input: z.input<typeof roomInputSchema>, userId?: string | null) {
   const data = roomInputSchema.parse(input);
   const hotel = await getHotel();
-  const dup = await db.room.findFirst({ where: { hotelId: hotel.id, number: data.number } });
-  if (dup) throw new AppError("CONFLICT", `Room ${data.number} already exists.`);
+  await assertRoomNumberFree(hotel.id, data.number);
   const room = await db.room.create({ data: { ...data, hotelId: hotel.id } });
   await audit({ userId, action: "room.created", entity: "Room", entityId: room.id, after: room });
   await enqueueInventorySync({ roomTypeIds: [room.roomTypeId], from: todayIn(hotel.timezone), to: toYear(hotel.timezone) }).catch(() => undefined);
   return room;
+}
+
+async function assertRoomNumberFree(hotelId: string, number: string, exceptId?: string) {
+  const dup = await db.room.findFirst({
+    where: { hotelId, number: { equals: number, mode: "insensitive" }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+  });
+  if (dup) throw new AppError("CONFLICT", `Room ${number} already exists.`, { field: "number" });
 }
 
 function toYear(tz: string) {
@@ -37,6 +43,7 @@ export async function updateRoom(id: string, input: Partial<z.input<typeof roomI
   const before = await db.room.findUnique({ where: { id } });
   if (!before) throw new AppError("NOT_FOUND", "Room not found.");
   const data = roomInputSchema.partial().parse(input);
+  if (data.number) await assertRoomNumberFree(before.hotelId, data.number, id);
   const room = await db.room.update({ where: { id }, data });
   await audit({ userId, action: "room.updated", entity: "Room", entityId: id, before, after: room });
   if (data.isActive !== undefined || data.roomTypeId !== undefined) {

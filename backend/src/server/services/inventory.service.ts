@@ -163,7 +163,7 @@ export const itemSchema = z.object({
   categoryId: z.string().min(1),
   locationId: z.string().min(1),
   supplierId: z.string().optional().default(""),
-  sku: z.string().trim().min(1).max(40),
+  sku: z.string().trim().toUpperCase().min(1).max(40),
   barcode: z.string().trim().max(64).optional().default(""),
   nameEn: z.string().trim().min(1).max(160),
   nameAr: z.string().trim().min(1).max(160),
@@ -183,6 +183,11 @@ export async function saveItem(id: string | null, raw: unknown, userId?: string 
   const hotel = await getHotel();
   await ensureInventoryDefaults(hotel.id);
   const barcode = data.barcode || null;
+  if (data.maxQty !== "" && !(Number(data.maxQty) >= 0)) throw new AppError("INVALID_INPUT", "Maximum quantity cannot be negative.", { field: "maxQty" });
+  const dupSku = await db.inventoryItem.findFirst({
+    where: { hotelId: hotel.id, deletedAt: null, sku: { equals: data.sku, mode: "insensitive" }, ...(id ? { id: { not: id } } : {}) },
+  });
+  if (dupSku) throw new AppError("CONFLICT", `Another item already uses SKU ${data.sku}.`, { field: "sku" });
   const payload = {
     categoryId: data.categoryId,
     locationId: data.locationId,

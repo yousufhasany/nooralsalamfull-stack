@@ -25,7 +25,8 @@ import { saveSettings, getHotel, type SettingGroup } from "@/server/services/set
 import { updateGuest, revealGuestId, deleteGuest } from "@/server/services/guest.service";
 import type { RoomStatus } from "@/generated/prisma/enums";
 import { savePublicImage } from "@/server/storage/public-files";
-import { bool, list, obj, opt, str } from "./form";
+import { bool, list, num, obj, opt, str } from "./form";
+import { flash } from "./flash";
 import { audit, deleteAuditHistory } from "@/server/services/audit.service";
 
 function refresh(...paths: string[]) {
@@ -79,14 +80,14 @@ export async function removeRoomImageAction(formData: FormData) {
 
 export async function createRoomAction(formData: FormData) {
   return adminAction("rooms.manage", async (user) => {
-    await createRoom({ number: str(formData, "number"), floor: Number(str(formData, "floor") || 0), roomTypeId: str(formData, "roomTypeId"), notes: opt(formData, "notes") ?? "", isActive: true }, user.id);
+    await createRoom({ number: str(formData, "number"), floor: num(formData, "floor", 0), roomTypeId: str(formData, "roomTypeId"), notes: opt(formData, "notes") ?? "", isActive: true }, user.id);
     refresh("/admin/rooms", "/admin/housekeeping");
   });
 }
 
 export async function updateRoomAction(formData: FormData) {
   return adminAction("rooms.manage", async (user) => {
-    await updateRoom(str(formData, "id"), { number: str(formData, "number"), floor: Number(str(formData, "floor") || 0), roomTypeId: str(formData, "roomTypeId"), notes: opt(formData, "notes") ?? "", isActive: bool(formData, "isActive") }, user.id);
+    await updateRoom(str(formData, "id"), { number: str(formData, "number"), floor: num(formData, "floor", 0), roomTypeId: str(formData, "roomTypeId"), notes: opt(formData, "notes") ?? "", isActive: bool(formData, "isActive") }, user.id);
     refresh("/admin/rooms", "/admin/housekeeping");
   });
 }
@@ -219,7 +220,7 @@ export async function saveSettingsGroupAction(formData: FormData) {
           parsed[k] = [];
         }
       }
-      if (numeric.has(k) && v !== "") parsed[k] = Number(v);
+      if (numeric.has(k) && v !== "") parsed[k] = num(formData, k);
     }
     for (const key of Object.keys(raw)) {
       if (key.endsWith("__bool")) {
@@ -254,7 +255,10 @@ export async function deleteGuestAction(formData: FormData) {
     await deleteGuest(id, user.id);
     refresh("/admin/guests", `/admin/guests/${id}`, "/admin/history");
   });
-  if (result.ok) redirect("/admin/guests");
+  if (result.ok) {
+    await flash("Guest deleted.");
+    redirect("/admin/guests");
+  }
   return result;
 }
 

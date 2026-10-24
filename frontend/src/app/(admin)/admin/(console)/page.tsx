@@ -9,6 +9,7 @@ import { formatMoney } from "@/lib/money";
 import { label } from "@/lib/labels";
 import { PageHeader } from "@/components/admin/page-header";
 import { BarList, SparkBars } from "@/components/admin/charts";
+import { AvailableRoomsCard } from "@/components/admin/available-rooms";
 import { Card, CardBody, CardHeader, Stat } from "@/components/ui/card";
 
 export default async function DashboardPage() {
@@ -40,10 +41,36 @@ export default async function DashboardPage() {
         <Stat label={t.arrivals} value={d.arrivalsToday} hint={<Link href="/admin/reservations?status=CONFIRMED" className="hover:underline">{t.openArrivals}</Link>} />
         <Stat label={t.departures} value={d.departuresToday} />
         <Stat label={t.inHouse} value={d.inHouse} />
-        <Stat label={t.occupancy} value={`${d.occupancyTodayPct}%`} hint={fmt(t.roomsCount, { n: d.roomsTotal })} />
+        <AvailableRoomsCard
+          count={d.availableTonight.count}
+          total={d.availableTonight.total}
+          byType={d.availableTonight.byType}
+          from={d.today}
+          to={d.tomorrow}
+          locale={locale}
+          canReserve={can(user, "reservations.create")}
+          t={{
+            availableTonight: t.availableTonight,
+            availableOfTotal: t.availableOfTotal,
+            availableRoomsTitle: t.availableRoomsTitle,
+            availableRoomsIntro: t.availableRoomsIntro,
+            canSell: t.canSell,
+            fullyBooked: t.fullyBooked,
+            roomReady: t.roomReady,
+            roomNeedsCleaning: t.roomNeedsCleaning,
+            reserve: t.reserve,
+            reserveAnyRoom: t.reserveAnyRoom,
+            noRoomsAvailable: t.noRoomsAvailable,
+            unassignedNote: t.unassignedNote,
+            close: t.close,
+            floor: t.floor,
+          }}
+        />
         <Stat label={t.dirty} value={d.dirtyRooms} tone={d.dirtyRooms ? "warn" : "default"} hint={t.dirtyHint} />
         <Stat label={t.cleaningRooms} value={d.cleaningRooms} tone={d.cleaningRooms ? "warn" : "default"} hint={t.cleaningHint} />
         {showDeskMoney ? <Stat label={t.paymentsToday} value={money(d.paymentsReceivedToday)} /> : null}
+        {showDeskMoney ? <Stat label={t.incomeMonth} value={money(d.incomeMonth)} hint={t.incomeMonthHint} /> : null}
+        {showDeskMoney ? <Stat label={t.incomeYear} value={money(d.incomeYear)} hint={t.incomeYearHint} /> : null}
         {showDeskMoney ? <Stat label={t.outstanding} value={money(d.outstandingInHouse)} tone={Number(d.outstandingInHouse) > 0 ? "warn" : "default"} /> : null}
         {showLedger ? <Stat label={t.pendingPayouts} value={money(d.pendingPayouts.net)} hint={fmt(t.recordsCount, { n: d.pendingPayouts.count })} /> : null}
       </div>
@@ -63,9 +90,9 @@ export default async function DashboardPage() {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title={t.occupancyNext} />
+          <CardHeader title={t.availableNext} description={fmt(t.roomsCount, { n: d.roomsTotal })} />
           <CardBody>
-            <SparkBars label="Occupancy" points={d.occupancySeries.map((n) => ({ label: n.date, value: n.pct }))} />
+            <SparkBars label={t.availableNext} points={d.occupancySeries.map((n) => ({ label: n.date, value: n.available }))} />
           </CardBody>
         </Card>
         <Card>

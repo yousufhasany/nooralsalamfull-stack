@@ -48,11 +48,11 @@ export function validateStayDates(
   opts: { today: DateStr; minStay: number; maxStay: number; maxAdvanceDays: number; allowPast?: boolean },
 ): number {
   const nights = diffDays(checkIn, checkOut);
-  if (nights < 1) throw new AppError("INVALID_DATES", "Check-out must be after check-in.");
-  if (!opts.allowPast && checkIn < opts.today) throw new AppError("INVALID_DATES", "Check-in date cannot be in the past.");
-  if (nights < opts.minStay) throw new AppError("INVALID_DATES", `Minimum stay is ${opts.minStay} night(s).`);
-  if (nights > opts.maxStay) throw new AppError("INVALID_DATES", `Maximum stay is ${opts.maxStay} nights.`);
-  if (diffDays(opts.today, checkIn) > opts.maxAdvanceDays) throw new AppError("INVALID_DATES", "Check-in date is too far in the future.");
+  if (nights < 1) throw new AppError("INVALID_DATES", "Check-out must be after check-in.", { field: "checkOut" });
+  if (!opts.allowPast && checkIn < opts.today) throw new AppError("INVALID_DATES", "Check-in date cannot be in the past.", { field: "checkIn" });
+  if (nights < opts.minStay) throw new AppError("INVALID_DATES", `Minimum stay is ${opts.minStay} night(s).`, { field: "checkOut" });
+  if (nights > opts.maxStay) throw new AppError("INVALID_DATES", `Maximum stay is ${opts.maxStay} nights.`, { field: "checkOut" });
+  if (diffDays(opts.today, checkIn) > opts.maxAdvanceDays) throw new AppError("INVALID_DATES", "Check-in date is too far in the future.", { field: "checkIn" });
   return nights;
 }
 

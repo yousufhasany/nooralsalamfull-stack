@@ -53,7 +53,7 @@ export default async function RatesPage() {
               <Input id="nameBn" name="nameBn" required />
             </Field>
             <Field label="Adjustment" htmlFor="adjustmentValue">
-              <Input id="adjustmentValue" name="adjustmentValue" defaultValue="0" />
+              <Input id="adjustmentValue" name="adjustmentValue" defaultValue="0" data-allow-negative />
             </Field>
             <Field label="Adjustment type" htmlFor="adjustmentType">
               <Select id="adjustmentType" name="adjustmentType" defaultValue="FIXED">
@@ -115,7 +115,7 @@ export default async function RatesPage() {
               <Input id="endDate" name="endDate" type="date" required />
             </Field>
             <Field label="Price" htmlFor="price">
-              <Input id="price" name="price" required />
+              <Input id="price" name="price" inputMode="decimal" required />
             </Field>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="isActive" defaultChecked /> Active
@@ -178,7 +178,7 @@ export default async function RatesPage() {
               </Select>
             </Field>
             <Field label="Value (+ markup / − discount)" htmlFor="adjv">
-              <Input id="adjv" name="adjustmentValue" required />
+              <Input id="adjv" name="adjustmentValue" required data-allow-negative />
             </Field>
             <Field label="Min nights" htmlFor="minNights">
               <Input id="minNights" name="minNights" type="number" />
@@ -227,7 +227,7 @@ export default async function RatesPage() {
               </Select>
             </Field>
             <Field label="Amount" htmlFor="amount">
-              <Input id="amount" name="amount" required />
+              <Input id="amount" name="amount" inputMode="decimal" required />
             </Field>
             <Field label="From" htmlFor="promo-from">
               <Input id="promo-from" name="startDate" type="date" required />

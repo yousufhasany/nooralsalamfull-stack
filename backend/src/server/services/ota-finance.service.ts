@@ -192,6 +192,9 @@ export async function recordBankReceipt(args: {
   notes?: string;
   userId?: string | null;
 }) {
+  if (!/^\d+(\.\d+)?$/.test(String(args.amount).trim()) || !D(args.amount).greaterThan(0)) {
+    throw new AppError("INVALID_INPUT", "Enter an amount greater than zero.", { field: "amount" });
+  }
   return db.$transaction(async (tx) => {
     if (args.payoutId) {
       const p = await tx.oTAPayout.findUnique({ where: { id: args.payoutId } });

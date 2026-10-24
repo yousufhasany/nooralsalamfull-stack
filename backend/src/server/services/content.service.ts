@@ -70,7 +70,7 @@ export async function submitContactMessage(raw: unknown, ip: string | null) {
 // ---------------------------------------------------------------------------
 
 export const facilityInputSchema = z.object({
-  slug: z.string().trim().min(1).max(60).regex(/^[a-z0-9-]+$/, "Use lower-case letters, numbers and dashes"),
+  slug: z.string().trim().toLowerCase().min(1).max(60).regex(/^[a-z0-9-]+$/, "Use lower-case letters, numbers and dashes"),
   nameEn: z.string().trim().min(1).max(120),
   nameAr: z.string().trim().min(1).max(120),
   nameBn: z.string().trim().min(1).max(120),
@@ -78,7 +78,7 @@ export const facilityInputSchema = z.object({
   descriptionAr: z.string().trim().max(1000).default(""),
   descriptionBn: z.string().trim().max(1000).default(""),
   icon: z.string().trim().max(40).default("sparkles"),
-  sortOrder: z.coerce.number().int().default(0),
+  sortOrder: z.coerce.number().int().min(0, "Sort order cannot be negative").default(0),
   isActive: z.coerce.boolean().default(true),
 });
 
@@ -103,7 +103,7 @@ export const galleryInputSchema = z.object({
   altEn: z.string().trim().max(200).default(""),
   altAr: z.string().trim().max(200).default(""),
   altBn: z.string().trim().max(200).default(""),
-  sortOrder: z.coerce.number().int().default(0),
+  sortOrder: z.coerce.number().int().min(0, "Sort order cannot be negative").default(0),
   isActive: z.coerce.boolean().default(true),
 });
 

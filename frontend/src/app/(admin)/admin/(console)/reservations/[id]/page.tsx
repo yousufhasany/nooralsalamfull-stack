@@ -182,11 +182,14 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                       </Select>
                     </Field>
                   ))}
+                  <p className="text-sm text-ink-600">
+                    Balance due: <strong>{money(balance.balance)}</strong>
+                  </p>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Deposit (optional)" htmlFor="depositAmount">
+                    <Field label="Payment now" htmlFor="depositAmount" hint="Added to Payments received today. Leave empty to keep the balance due until check-out.">
                       <Input id="depositAmount" name="depositAmount" inputMode="decimal" />
                     </Field>
-                    <Field label="Deposit method" htmlFor="depositSource">
+                    <Field label="Method" htmlFor="depositSource">
                       <Select id="depositSource" name="depositSource" defaultValue="HOTEL_CASH">
                         <option value="HOTEL_CASH">Cash</option>
                         <option value="HOTEL_CARD">Card</option>
@@ -205,26 +208,27 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                 <ActionForm action={checkOutAction} className="space-y-3">
                   <input type="hidden" name="reservationId" value={res.id} />
                   <p className="text-sm text-ink-600">
-                    Balance due: <strong>{money(balance.balance)}</strong>. Room will become Dirty after check-out.
+                    Balance due: <strong>{money(balance.balance)}</strong>. The room becomes Dirty after check-out.
                   </p>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Collect now" htmlFor="paymentAmount">
-                      <Input id="paymentAmount" name="paymentAmount" inputMode="decimal" defaultValue={balance.balance.greaterThan(0) ? balance.balance.toFixed(2) : ""} />
-                    </Field>
-                    <Field label="Method" htmlFor="paymentSource">
-                      <Select id="paymentSource" name="paymentSource" defaultValue="HOTEL_CASH">
-                        <option value="HOTEL_CASH">Cash</option>
-                        <option value="HOTEL_CARD">Card</option>
-                        <option value="BANK_TRANSFER">Bank</option>
-                      </Select>
-                    </Field>
-                    <Field label="Reference" htmlFor="paymentReference">
-                      <Input id="paymentReference" name="paymentReference" />
-                    </Field>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" name="allowOutstanding" /> Allow outstanding balance (manager decision)
-                  </label>
+                  {balance.balance.greaterThan(0) ? (
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <Field label="Payment" htmlFor="paymentAmount" hint="Required. Added to Payments received today.">
+                        <Input id="paymentAmount" name="paymentAmount" inputMode="decimal" defaultValue={balance.balance.toFixed(2)} required />
+                      </Field>
+                      <Field label="Method" htmlFor="paymentSource">
+                        <Select id="paymentSource" name="paymentSource" defaultValue="HOTEL_CASH">
+                          <option value="HOTEL_CASH">Cash</option>
+                          <option value="HOTEL_CARD">Card</option>
+                          <option value="BANK_TRANSFER">Bank</option>
+                        </Select>
+                      </Field>
+                      <Field label="Reference" htmlFor="paymentReference">
+                        <Input id="paymentReference" name="paymentReference" />
+                      </Field>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-ink-600">Nothing to collect. This stay is already paid.</p>
+                  )}
                   <SubmitButton>Check out & issue invoice</SubmitButton>
                 </ActionForm>
               ) : null}
@@ -283,7 +287,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                     <Input id="description" name="description" required />
                   </Field>
                   <Field label="Qty" htmlFor="quantity">
-                    <Input id="quantity" name="quantity" type="number" defaultValue={1} />
+                    <Input id="quantity" name="quantity" type="number" min={1} step={1} defaultValue={1} />
                   </Field>
                   <Field label="Unit price" htmlFor="unitPrice">
                     <Input id="unitPrice" name="unitPrice" inputMode="decimal" required />
@@ -304,7 +308,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                       <ActionForm action={refundPaymentAction} className="mt-2 flex flex-wrap gap-2">
                         <input type="hidden" name="reservationId" value={res.id} />
                         <input type="hidden" name="paymentId" value={p.id} />
-                        <Input name="amount" placeholder="Amount" className="h-9 w-28" required />
+                        <Input name="amount" inputMode="decimal" placeholder="Amount" className="h-9 w-28" required />
                         <Input name="reason" placeholder="Reason" className="h-9 w-40" required />
                         <SubmitButton variant="outline">Refund</SubmitButton>
                       </ActionForm>

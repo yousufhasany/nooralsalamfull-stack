@@ -134,10 +134,10 @@ function RoomTypeForm({
         <Input id={`nb-${existing?.id ?? "new"}`} name="nameBn" defaultValue={existing?.nameBn} required />
       </Field>
       <Field label={t.basePrice} htmlFor={`bp-${existing?.id ?? "new"}`}>
-        <Input id={`bp-${existing?.id ?? "new"}`} name="basePrice" defaultValue={existing?.basePrice.toString()} required />
+        <Input id={`bp-${existing?.id ?? "new"}`} name="basePrice" inputMode="decimal" defaultValue={existing?.basePrice.toString()} required />
       </Field>
       <Field label={t.weekendPrice} htmlFor={`wp-${existing?.id ?? "new"}`}>
-        <Input id={`wp-${existing?.id ?? "new"}`} name="weekendPrice" defaultValue={existing?.weekendPrice?.toString() ?? ""} />
+        <Input id={`wp-${existing?.id ?? "new"}`} name="weekendPrice" inputMode="decimal" defaultValue={existing?.weekendPrice?.toString() ?? ""} />
       </Field>
       <Field label={t.sizeM2} htmlFor={`sz-${existing?.id ?? "new"}`}>
         <Input id={`sz-${existing?.id ?? "new"}`} name="sizeSqm" type="number" defaultValue={existing?.sizeSqm ?? ""} />

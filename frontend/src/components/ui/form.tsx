@@ -4,8 +4,13 @@ import { cn } from "@/lib/utils";
 const control =
   "block w-full rounded-lg border border-ink-200 bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 transition-colors focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 disabled:bg-sand-100 aria-[invalid=true]:border-danger-600";
 
-export function Input({ className, ...props }: ComponentProps<"input">) {
-  return <input className={cn(control, "h-11", className)} {...props} />;
+/** Number entries are plain text with a numeric keypad, so the mouse wheel and spinner arrows can't change them. */
+export function Input({ className, type, min, max, step, ...props }: ComponentProps<"input">) {
+  if (type === "number") {
+    const whole = step === undefined || Number(step) === 1;
+    return <input className={cn(control, "h-11", className)} type="text" inputMode={whole ? "numeric" : "decimal"} autoComplete="off" {...props} />;
+  }
+  return <input className={cn(control, "h-11", className)} type={type} min={min} max={max} step={step} {...props} />;
 }
 
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
@@ -40,7 +45,7 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div data-field className={cn("space-y-1.5", className)}>
       <label htmlFor={htmlFor} className="block text-sm font-medium text-ink-800">
         {label}
         {required ? <span aria-hidden className="ms-0.5 text-danger-600">*</span> : optionalText ? <span className="ms-1 text-xs font-normal text-ink-500">({optionalText})</span> : null}

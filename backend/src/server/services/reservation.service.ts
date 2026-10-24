@@ -195,7 +195,7 @@ export async function createReservation(input: CreateReservationInput) {
   const rooms = expandLines(input.lines);
   if (rooms.length === 0) throw new AppError("INVALID_INPUT", "Select at least one room.");
   if (rooms.length > booking.maxRoomsPerBooking && !isExternal) {
-    throw new AppError("INVALID_INPUT", `A maximum of ${booking.maxRoomsPerBooking} rooms can be booked at once.`);
+    throw new AppError("INVALID_INPUT", `A maximum of ${booking.maxRoomsPerBooking} rooms can be booked at once.`, { field: "rooms" });
   }
 
   const requested = new Map<string, number>();
@@ -208,7 +208,7 @@ export async function createReservation(input: CreateReservationInput) {
       const t = types.find((x) => x.id === r.roomTypeId);
       if (!t) throw new AppError("NOT_FOUND", "Room type not found.");
       if (r.adults > t.maxAdults || r.children > t.maxChildren || r.adults + r.children > t.maxOccupancy) {
-        throw new AppError("INVALID_INPUT", `The number of guests exceeds the capacity of ${t.nameEn}.`);
+        throw new AppError("INVALID_INPUT", `The number of guests exceeds the capacity of ${t.nameEn}.`, { field: "adults" });
       }
     }
     if (!input.skipRestrictions) {
@@ -225,7 +225,7 @@ export async function createReservation(input: CreateReservationInput) {
   }
 
   const promoBase = input.promotionCode?.trim() ? await findPromotion(db, input.promotionCode) : null;
-  if (input.promotionCode?.trim() && !promoBase) throw new AppError("INVALID_INPUT", "This promotion code is not valid.");
+  if (input.promotionCode?.trim() && !promoBase) throw new AppError("INVALID_INPUT", "This promotion code is not valid.", { field: "promotionCode" });
 
   const collection: PaymentCollectionMethod = input.paymentCollection ?? "PAY_AT_HOTEL";
   const defaultStatus: ReservationStatus =

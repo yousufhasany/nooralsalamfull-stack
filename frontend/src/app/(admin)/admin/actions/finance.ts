@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { adminAction } from "@/server/auth/action";
 import { recordBankReceipt, markPayoutPaid, runReconciliation, saveReconciliation, reconcileReservation } from "@/server/services/ota-finance.service";
 import { toDate } from "@/lib/dates";
-import { opt, str } from "./form";
+import { amount, opt, str } from "./form";
 
 export async function runReconciliationAction(formData: FormData) {
   return adminAction("reconciliation.manage", async (user) => {
@@ -30,7 +30,7 @@ export async function recordBankReceiptAction(formData: FormData) {
   return adminAction("finance.manage", async (user) => {
     await recordBankReceipt({
       payoutId: opt(formData, "payoutId") ?? null,
-      amount: str(formData, "amount"),
+      amount: amount(formData, "amount"),
       receivedOn: str(formData, "receivedOn"),
       reference: opt(formData, "reference"),
       bankName: opt(formData, "bankName"),

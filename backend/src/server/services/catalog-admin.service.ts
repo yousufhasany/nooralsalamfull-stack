@@ -16,7 +16,7 @@ const bool = z.coerce.boolean();
 // ---------------------------------------------------------------------------
 
 export const roomTypeSchema = z.object({
-  slug: z.string().trim().min(2).max(60).regex(/^[a-z0-9-]+$/, "Use lower-case letters, numbers and dashes"),
+  slug: z.string().trim().toLowerCase().min(2).max(60).regex(/^[a-z0-9-]+$/, "Use lower-case letters, numbers and dashes"),
   nameEn: z.string().trim().min(1).max(120),
   nameAr: z.string().trim().min(1).max(120),
   nameBn: z.string().trim().min(1).max(120),
@@ -32,7 +32,7 @@ export const roomTypeSchema = z.object({
   maxOccupancy: z.coerce.number().int().min(1).max(30),
   basePrice: money,
   weekendPrice: money.optional().nullable().or(z.literal("").transform(() => null)),
-  sortOrder: z.coerce.number().int().default(0),
+  sortOrder: z.coerce.number().int().min(0, "Sort order cannot be negative").default(0),
   isActive: bool.default(true),
   amenityIds: z.array(z.string()).default([]),
 });
@@ -42,7 +42,7 @@ export async function saveRoomType(id: string | null, raw: unknown, userId: stri
   if (data.maxOccupancy < data.maxAdults) throw new AppError("INVALID_INPUT", "Maximum occupancy cannot be smaller than maximum adults.");
   const hotel = await getHotel();
   const dup = await db.roomType.findFirst({ where: { hotelId: hotel.id, slug: data.slug, ...(id ? { id: { not: id } } : {}) } });
-  if (dup) throw new AppError("CONFLICT", "Another room type already uses this slug.");
+  if (dup) throw new AppError("CONFLICT", "Another room type already uses this slug.", { field: "slug" });
   const row = await db.$transaction(async (tx) => {
     const rt = id
       ? await tx.roomType.update({ where: { id }, data })
@@ -89,7 +89,7 @@ export async function removeRoomImage(id: string, userId: string) {
 // ---------------------------------------------------------------------------
 
 export const ratePlanSchema = z.object({
-  code: z.string().trim().min(2).max(40).regex(/^[A-Z0-9_]+$/, "Use upper-case letters, numbers and underscores"),
+  code: z.string().trim().toUpperCase().min(2).max(40).regex(/^[A-Z0-9_]+$/, "Use letters, numbers and underscores"),
   type: z.enum(["STANDARD", "NON_REFUNDABLE", "BREAKFAST_INCLUDED", "HALF_BOARD", "FULL_BOARD", "CORPORATE", "PROMOTIONAL"]),
   nameEn: z.string().trim().min(1).max(120),
   nameAr: z.string().trim().min(1).max(120),
@@ -99,7 +99,7 @@ export const ratePlanSchema = z.object({
   adjustmentValue: z.string().trim().regex(/^-?\d{1,8}(\.\d{1,2})?$/, "Enter a number, e.g. -10 or 25.50").default("0"),
   isPublic: bool.default(true),
   isActive: bool.default(true),
-  sortOrder: z.coerce.number().int().default(0),
+  sortOrder: z.coerce.number().int().min(0, "Sort order cannot be negative").default(0),
 });
 
 export async function saveRatePlan(id: string | null, raw: unknown, userId: string) {
@@ -118,7 +118,7 @@ export const roomRateSchema = z
     endDate: dateStr,
     price: money,
     daysOfWeek: z.array(z.coerce.number().int().min(1).max(7)).default([]),
-    priority: z.coerce.number().int().default(0),
+    priority: z.coerce.number().int().min(0, "Priority cannot be negative").default(0),
     isActive: bool.default(true),
   })
   .refine((v) => v.endDate >= v.startDate, { message: "End date must not be before start date", path: ["endDate"] });
@@ -145,7 +145,7 @@ export const pricingRuleSchema = z.object({
   adjustmentType: z.enum(["FIXED", "PERCENT"]),
   adjustmentValue: z.string().trim().regex(/^-?\d{1,8}(\.\d{1,2})?$/, "Enter a number, e.g. -10 or 25.50"),
   minNights: z.coerce.number().int().min(1).optional().nullable().or(z.literal("").transform(() => null)),
-  priority: z.coerce.number().int().default(0),
+  priority: z.coerce.number().int().min(0, "Priority cannot be negative").default(0),
   isActive: bool.default(true),
 });
 

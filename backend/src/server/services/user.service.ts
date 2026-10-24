@@ -19,8 +19,8 @@ export async function saveUser(id: string | null, raw: unknown, actorId: string)
     if (!d.password) throw new AppError("INVALID_INPUT", "A password is required for new users.");
     const weak = validatePasswordStrength(d.password);
     if (weak) throw new AppError("INVALID_INPUT", weak);
-    const dup = await db.user.findUnique({ where: { email: d.email } });
-    if (dup) throw new AppError("CONFLICT", "A user with this email already exists.");
+    const dup = await db.user.findFirst({ where: { email: { equals: d.email, mode: "insensitive" } } });
+    if (dup) throw new AppError("CONFLICT", "A user with this email already exists.", { field: "email" });
     const u = await db.user.create({ data: { email: d.email, name: d.name, roleId: role.id, isActive: d.isActive, passwordHash: await hashPassword(d.password) } });
     await audit({ userId: actorId, action: "user.created", entity: "User", entityId: u.id, after: { email: u.email, role: d.role } });
     return u;
@@ -30,7 +30,11 @@ export async function saveUser(id: string | null, raw: unknown, actorId: string)
     throw new AppError("INVALID_STATE", "You cannot deactivate or change the role of your own account.");
   }
   const data: Record<string, unknown> = { name: d.name, roleId: role.id, isActive: d.isActive };
-  if (before.email !== d.email) data.email = d.email;
+  if (before.email !== d.email) {
+    const dup = await db.user.findFirst({ where: { email: { equals: d.email, mode: "insensitive" }, id: { not: id } } });
+    if (dup) throw new AppError("CONFLICT", "A user with this email already exists.", { field: "email" });
+    data.email = d.email;
+  }
   if (d.password) {
     const weak = validatePasswordStrength(d.password);
     if (weak) throw new AppError("INVALID_INPUT", weak);

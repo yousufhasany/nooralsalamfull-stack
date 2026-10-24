@@ -22,7 +22,7 @@ import {
   saveSimpleInventory,
   saveSupplier,
 } from "@/server/services/inventory.service";
-import { bool, opt, str } from "./form";
+import { amount, bool, opt, str } from "./form";
 
 function refresh() {
   revalidatePath("/admin/inventory", "layout");
@@ -30,7 +30,7 @@ function refresh() {
 
 export async function recordCleaningUseAction(formData: FormData) {
   return adminAction("inventory.issue", async (user) => {
-    await recordCleaningUse({ itemId: str(formData, "itemId"), quantity: str(formData, "quantity"), userId: user.id });
+    await recordCleaningUse({ itemId: str(formData, "itemId"), quantity: amount(formData, "quantity"), userId: user.id });
     refresh();
   });
 }
@@ -40,8 +40,8 @@ export async function saveSimpleInventoryAction(formData: FormData) {
     await saveSimpleInventory({
       date: str(formData, "date"),
       name: str(formData, "name"),
-      quantity: str(formData, "quantity"),
-      price: str(formData, "price"),
+      quantity: amount(formData, "quantity"),
+      price: amount(formData, "price"),
       userId: user.id,
     });
     refresh();
@@ -60,10 +60,10 @@ export async function saveItemAction(formData: FormData) {
       nameAr: str(formData, "nameAr"),
       description: opt(formData, "description") ?? "",
       unit: str(formData, "unit"),
-      minQty: str(formData, "minQty") || "0",
-      reorderQty: str(formData, "reorderQty") || "0",
-      maxQty: opt(formData, "maxQty") ?? "",
-      unitCost: str(formData, "unitCost") || "0",
+      minQty: (amount(formData, "minQty") || "0"),
+      reorderQty: (amount(formData, "reorderQty") || "0"),
+      maxQty: amount(formData, "maxQty"),
+      unitCost: (amount(formData, "unitCost") || "0"),
       batchNumber: opt(formData, "batchNumber") ?? "",
       expiryDate: opt(formData, "expiryDate") ?? "",
       isActive: bool(formData, "isActive"),
@@ -113,14 +113,14 @@ export async function saveSupplierAction(formData: FormData) {
 
 export async function receiveStockAction(formData: FormData) {
   return adminAction("inventory.receive", async (user) => {
-    await postReceipt({ itemId: str(formData, "itemId"), quantity: str(formData, "quantity"), unitCost: str(formData, "unitCost"), supplierNote: opt(formData, "note"), reference: opt(formData, "reference"), userId: user.id });
+    await postReceipt({ itemId: str(formData, "itemId"), quantity: amount(formData, "quantity"), unitCost: amount(formData, "unitCost"), supplierNote: opt(formData, "note"), reference: opt(formData, "reference"), userId: user.id });
     refresh();
   });
 }
 
 export async function issueStockAction(formData: FormData) {
   return adminAction("inventory.issue", async (user) => {
-    await postIssue({ itemId: str(formData, "itemId"), quantity: str(formData, "quantity"), department: str(formData, "department"), reason: str(formData, "reason"), userId: user.id });
+    await postIssue({ itemId: str(formData, "itemId"), quantity: amount(formData, "quantity"), department: str(formData, "department"), reason: str(formData, "reason"), userId: user.id });
     refresh();
   });
 }
@@ -128,7 +128,7 @@ export async function issueStockAction(formData: FormData) {
 export async function createPurchaseOrderAction(formData: FormData) {
   return adminAction("inventory.manage", async (user) => {
     const itemId = str(formData, "itemId");
-    await createPurchaseOrder({ supplierId: str(formData, "supplierId"), expectedDate: opt(formData, "expectedDate"), lines: [{ itemId, quantity: str(formData, "quantity"), unitCost: str(formData, "unitCost") }], userId: user.id });
+    await createPurchaseOrder({ supplierId: str(formData, "supplierId"), expectedDate: opt(formData, "expectedDate"), lines: [{ itemId, quantity: amount(formData, "quantity"), unitCost: amount(formData, "unitCost") }], userId: user.id });
     refresh();
   });
 }
@@ -149,7 +149,7 @@ export async function receivePurchaseOrderAction(formData: FormData) {
 
 export async function createTransferAction(formData: FormData) {
   return adminAction("inventory.transfer", async (user) => {
-    await createTransfer({ fromLocationId: str(formData, "fromLocationId"), toLocationId: str(formData, "toLocationId"), lines: [{ itemId: str(formData, "itemId"), quantity: str(formData, "quantity") }], notes: opt(formData, "notes"), userId: user.id });
+    await createTransfer({ fromLocationId: str(formData, "fromLocationId"), toLocationId: str(formData, "toLocationId"), lines: [{ itemId: str(formData, "itemId"), quantity: amount(formData, "quantity") }], notes: opt(formData, "notes"), userId: user.id });
     refresh();
   });
 }
@@ -166,7 +166,7 @@ export async function advanceTransferAction(formData: FormData) {
 
 export async function requestAdjustmentAction(formData: FormData) {
   return adminAction("inventory.adjust", async (user) => {
-    await requestAdjustment({ itemId: str(formData, "itemId"), quantity: str(formData, "quantity"), reason: str(formData, "reason"), userId: user.id });
+    await requestAdjustment({ itemId: str(formData, "itemId"), quantity: amount(formData, "quantity"), reason: str(formData, "reason"), userId: user.id });
     refresh();
   });
 }

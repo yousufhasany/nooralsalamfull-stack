@@ -17,6 +17,7 @@ export function ManageBookingClient({ locale, t, hijri, today }: { locale: Local
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [entered, setEntered] = useState({ number: "", contact: "", message: "", requestedCheckIn: "", requestedCheckOut: "" });
   const [pending, startTransition] = useTransition();
 
   function errorText(r: Extract<ActionResult<unknown>, { ok: false }>): string {
@@ -28,6 +29,7 @@ export function ManageBookingClient({ locale, t, hijri, today }: { locale: Local
   function lookup(fd: FormData) {
     const number = String(fd.get("number") ?? "");
     const contact = String(fd.get("contact") ?? "");
+    setEntered((e) => ({ ...e, number, contact }));
     setError(null);
     setNotice(null);
     startTransition(async () => {
@@ -52,16 +54,19 @@ export function ManageBookingClient({ locale, t, hijri, today }: { locale: Local
 
   function requestChange(fd: FormData) {
     if (!session) return;
+    const change = {
+      message: String(fd.get("message") ?? ""),
+      requestedCheckIn: String(fd.get("requestedCheckIn") ?? ""),
+      requestedCheckOut: String(fd.get("requestedCheckOut") ?? ""),
+    };
+    setEntered((e) => ({ ...e, ...change }));
     setError(null);
     startTransition(async () => {
-      const r = await requestChangeAction(session.number, session.contact, {
-        message: String(fd.get("message") ?? ""),
-        requestedCheckIn: String(fd.get("requestedCheckIn") ?? ""),
-        requestedCheckOut: String(fd.get("requestedCheckOut") ?? ""),
-      });
+      const r = await requestChangeAction(session.number, session.contact, change);
       if (r.ok) {
         setSession({ ...session, view: r.data });
         setNotice(t.manage.changeSent);
+        setEntered((e) => ({ ...e, message: "", requestedCheckIn: "", requestedCheckOut: "" }));
       } else setError(errorText(r));
     });
   }
@@ -72,10 +77,10 @@ export function ManageBookingClient({ locale, t, hijri, today }: { locale: Local
         <p className="text-sm text-ink-700">{t.manage.intro}</p>
         {error ? <Alert tone="danger">{error}</Alert> : null}
         <Field label={t.manage.number} htmlFor="m-number" required>
-          <Input id="m-number" name="number" required autoComplete="off" dir="ltr" placeholder="NAS-2026-000001" />
+          <Input id="m-number" name="number" defaultValue={entered.number} required autoComplete="off" dir="ltr" placeholder="NAS-2026-000001" />
         </Field>
         <Field label={t.manage.contact} htmlFor="m-contact" required>
-          <Input id="m-contact" name="contact" required autoComplete="email" dir="ltr" />
+          <Input id="m-contact" name="contact" defaultValue={entered.contact} required autoComplete="email" dir="ltr" />
         </Field>
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? t.common.loading : t.manage.find}
@@ -126,14 +131,14 @@ export function ManageBookingClient({ locale, t, hijri, today }: { locale: Local
           <form action={requestChange} className="mt-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={`${t.manage.newDates} - ${t.common.checkIn}`} htmlFor="m-in">
-                <Input id="m-in" name="requestedCheckIn" type="date" min={today} />
+                <Input id="m-in" name="requestedCheckIn" type="date" min={today} defaultValue={entered.requestedCheckIn} />
               </Field>
               <Field label={`${t.manage.newDates} - ${t.common.checkOut}`} htmlFor="m-out">
-                <Input id="m-out" name="requestedCheckOut" type="date" min={today} />
+                <Input id="m-out" name="requestedCheckOut" type="date" min={today} defaultValue={entered.requestedCheckOut} />
               </Field>
             </div>
             <Field label={t.common.message} htmlFor="m-msg" required>
-              <Textarea id="m-msg" name="message" required rows={4} maxLength={1000} />
+              <Textarea id="m-msg" name="message" required rows={4} maxLength={1000} defaultValue={entered.message} />
             </Field>
             <Button type="submit" disabled={pending}>
               {pending ? t.common.loading : t.common.submit}

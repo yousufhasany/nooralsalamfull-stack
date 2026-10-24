@@ -1868,6 +1868,107 @@ html[lang="bn"] .font-display {
 .read-only-lock button {
   display: none !important;
 }
+[data-field][data-error]::after {
+  content: attr(data-error);
+  display: block;
+  margin-top: 0.375rem;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger-600);
+}
+input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"],
+input[aria-invalid="true"]:focus, select[aria-invalid="true"]:focus, textarea[aria-invalid="true"]:focus {
+  border-color: var(--color-danger-600);
+  background-color: var(--color-danger-50);
+}
+.toast-stack {
+  position: fixed;
+  inset-inline-end: 1.25rem;
+  top: 4.75rem;
+  z-index: 60;
+  display: flex;
+  width: min(24rem, calc(100vw - 2.5rem));
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-sand-200);
+  border-inline-start-width: 4px;
+  background: var(--color-white);
+  padding: 0.75rem 1rem;
+  font-size: var(--text-sm);
+  color: var(--color-ink-800);
+  box-shadow: 0 2px 4px rgb(28 33 30 / 0.06), 0 18px 40px -12px rgb(15 58 45 / 0.28);
+  animation: toast-in 180ms ease-out;
+}
+.toast-success {
+  border-inline-start-color: var(--color-ok-600);
+}
+.toast-danger {
+  border-inline-start-color: var(--color-danger-600);
+}
+.toast-title {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink-900);
+}
+.toast-close {
+  margin-inline-start: auto;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: var(--color-ink-500);
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.admin-dialog {
+  margin: auto;
+  width: min(48rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-sand-200);
+  background: var(--color-white);
+  padding: 0;
+  color: var(--color-ink-900);
+  box-shadow: 0 2px 4px rgb(28 33 30 / 0.06), 0 18px 40px -12px rgb(15 58 45 / 0.28);
+}
+.admin-dialog::backdrop {
+  background: rgb(10 42 33 / 0.5);
+}
+.stat-button {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  text-align: start;
+  border-radius: var(--radius-2xl);
+}
+.stat-button:hover > div {
+  border-color: var(--color-brand-300);
+}
+.room-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-sand-200);
+  background: var(--color-sand-50);
+  padding-block: 0.375rem;
+  padding-inline: 0.75rem 0.375rem;
+  font-size: var(--text-sm);
+}
 .read-only-lock form {
   pointer-events: none;
   opacity: 0.7;
