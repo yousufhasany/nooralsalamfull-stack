@@ -2,6 +2,7 @@ import { db } from "@/server/db/client";
 import { addDays, diffDays, fromDate, toDate, type DateStr } from "@/lib/dates";
 import { AppError } from "@/lib/errors";
 import { D, toDb } from "@/lib/money";
+import { label } from "@/lib/labels";
 import { getAvailability } from "./availability.service";
 import { revenueByChannel } from "./financial.service";
 
@@ -143,8 +144,8 @@ export async function runReport(kind: ReportKind, from: DateStr, to: DateStr): P
         columns: [
           { key: "receivedAt", label: "Received" },
           { key: "reservation", label: "Reservation" },
-          { key: "source", label: "Source" },
-          { key: "method", label: "Collected by" },
+          { key: "method", label: "Method" },
+          { key: "collectedBy", label: "Collected by" },
           { key: "reference", label: "Reference" },
           { key: "amount", label: "Amount", numeric: true },
           { key: "refunded", label: "Refunded", numeric: true },
@@ -153,8 +154,8 @@ export async function runReport(kind: ReportKind, from: DateStr, to: DateStr): P
         rows: rows.map((p) => ({
           receivedAt: p.receivedAt.toISOString().slice(0, 16).replace("T", " "),
           reservation: p.reservation.number,
-          source: p.source,
-          method: p.collectionMethod,
+          method: label.paymentSource(p.source, "en"),
+          collectedBy: label.collection(p.collectionMethod, "en"),
           reference: p.reference ?? "",
           amount: p.amount.toFixed(2),
           refunded: p.refunds.filter((x) => x.status === "COMPLETED").reduce((a, x) => a.plus(x.amount.toString()), D(0)).toFixed(2),

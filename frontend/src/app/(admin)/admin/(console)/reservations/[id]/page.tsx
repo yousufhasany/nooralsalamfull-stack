@@ -37,6 +37,23 @@ import {
   voidChargeAction,
 } from "@/app/(admin)/admin/actions/reservations";
 
+/** Cash, card and bank are all money received. The ledger stores the method code; the screen shows the name. */
+function ledgerLine(type: string, category: string, description: string, locale: "en" | "ar" | "bn") {
+  const match = description.match(/^(Payment|Refund) \(([A-Z0-9_]+)\)(.*)$/);
+  if (!match) return { type, category, note: description };
+  const method = label.paymentSource(match[2], locale);
+  const rest = match[3].replace(/^:/, "").trim();
+  const note =
+    match[1] === "Refund"
+      ? rest
+        ? `Refund · ${method} · ${rest}`
+        : `Refund · ${method}`
+      : rest
+        ? `${method} payment · ${rest}`
+        : `${method} payment`;
+  return { type: match[1], category: method, note };
+}
+
 export default async function ReservationDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePagePermission("reservations.view");
   const { id } = await params;
@@ -302,7 +319,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
               <ul className="text-sm">
                 {res.payments.map((p) => (
                   <li key={p.id} className="border-b border-sand-100 py-2">
-                    {money(p.amount)} · {label.paymentSource(p.source, locale)} · {label.collection(p.collectionMethod, locale)} · {p.status}
+                    {money(p.amount)} · {label.paymentSource(p.source, locale)} · {label.collection(p.collectionMethod, locale)} · {p.status === "SUCCEEDED" ? "Paid" : p.status}
                     {p.reference ? ` · ${p.reference}` : ""}
                     {can(user, "payments.refund") && p.status === "SUCCEEDED" ? (
                       <ActionForm action={refundPaymentAction} className="mt-2 flex flex-wrap gap-2">
@@ -324,9 +341,9 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                   </Field>
                   <Field label="Source" htmlFor="source">
                     <Select id="source" name="source" defaultValue="HOTEL_CASH">
-                      <option value="HOTEL_CASH">Hotel cash</option>
-                      <option value="HOTEL_CARD">Hotel card</option>
-                      <option value="BANK_TRANSFER">Bank transfer</option>
+                      <option value="HOTEL_CASH">Cash</option>
+                      <option value="HOTEL_CARD">Card</option>
+                      <option value="BANK_TRANSFER">Bank</option>
                       <option value="DIRECT_WEBSITE">Direct website</option>
                     </Select>
                   </Field>
@@ -391,15 +408,18 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                   </tr>
                 </thead>
                 <tbody>
-                  {res.transactions.map((tx) => (
+                  {res.transactions.map((tx) => {
+                    const line = ledgerLine(tx.type, tx.category, tx.description, locale);
+                    return (
                     <tr key={tx.id} className="border-t border-sand-100">
                       <td className="py-1.5 text-ink-500">{formatDateTime(tx.postedAt, locale)}</td>
-                      <td>{tx.type}</td>
-                      <td>{tx.category}</td>
+                      <td>{line.type}</td>
+                      <td>{line.category}</td>
                       <td className="text-end tabular-nums">{money(tx.amount)}</td>
-                      <td className="text-ink-500">{tx.description}</td>
+                      <td className="text-ink-500">{line.note}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </CardBody>

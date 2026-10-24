@@ -56,9 +56,9 @@ export const PAYMENT_SOURCE_LABELS: Record<string, L> = {
   AGODA: { en: "Agoda", ar: "Agoda", bn: "Agoda" },
   TRIP_COM: { en: "Trip.com", ar: "Trip.com", bn: "Trip.com" },
   EXPEDIA: { en: "Expedia", ar: "Expedia", bn: "Expedia" },
-  HOTEL_CASH: { en: "Hotel cash", ar: "نقداً في الفندق", bn: "হোটেল নগদ" },
-  HOTEL_CARD: { en: "Hotel card", ar: "بطاقة في الفندق", bn: "হোটেল কার্ড" },
-  BANK_TRANSFER: { en: "Bank transfer", ar: "تحويل بنكي", bn: "ব্যাংক ট্রান্সফার" },
+  HOTEL_CASH: { en: "Cash", ar: "نقد", bn: "নগদ" },
+  HOTEL_CARD: { en: "Card", ar: "بطاقة", bn: "কার্ড" },
+  BANK_TRANSFER: { en: "Bank", ar: "بنك", bn: "ব্যাংক" },
   OTHER: { en: "Other", ar: "أخرى", bn: "অন্যান্য" },
 };
 

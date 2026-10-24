@@ -70,7 +70,7 @@ export async function checkIn(input: CheckInInput) {
       if (!["AVAILABLE", "RESERVED"].includes(room.status)) {
         throw new AppError("INVALID_STATE", `Room ${room.number} is ${room.status} and cannot be given to a guest.`);
       }
-      await tx.reservationRoom.update({ where: { id: rr.id }, data: { roomId } });
+      if (rr.roomId !== roomId) await tx.reservationRoom.update({ where: { id: rr.id }, data: { roomId } });
       await setRoomStatus({ roomId, status: "OCCUPIED", userId: input.userId, system: true, note: `Check-in ${res.number}` }, tx);
     }
 

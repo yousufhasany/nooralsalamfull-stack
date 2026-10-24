@@ -73,6 +73,50 @@ describe("check-in / check-out", () => {
     expect(await db.housekeepingTask.count({ where: { roomId, status: { in: ["OPEN", "IN_PROGRESS"] } } })).toBe(1);
   });
 
+  it("sells a checked-out room again tonight once housekeeping marks it available", async () => {
+    const w = await createWorld({ rooms: 1, taxRate: "5" });
+    const r = await arrivingToday(w, 2);
+    const ci = await checkIn({ reservationId: r.id, guestVerified: true });
+    const roomId = ci.rooms[0].roomId!;
+    await checkOut({
+      reservationId: r.id,
+      payment: { amount: "630.00", source: "HOTEL_CASH", collectionMethod: "HOTEL_COLLECTED" },
+    });
+    const { getAvailability } = await import("@/server/services/availability.service");
+    const dirty = await getAvailability({ roomTypeIds: [w.roomType.id], checkIn: today(), checkOut: addDays(today(), 1) });
+    expect(dirty[0].nights[0].available).toBe(0);
+
+    await setRoomStatus({ roomId, status: "AVAILABLE", inspectionApproved: true, note: "Inspection approved" });
+    const ready = await getAvailability({ roomTypeIds: [w.roomType.id], checkIn: today(), checkOut: addDays(today(), 1) });
+    expect(ready[0].totalRooms).toBe(1);
+    expect(ready[0].nights[0].available).toBe(1);
+  });
+
+  it("checks a new guest into a ready checked-out room and records a card payment", async () => {
+    const w = await createWorld({ rooms: 1, taxRate: "5" });
+    const first = await arrivingToday(w, 2);
+    const ci = await checkIn({ reservationId: first.id, guestVerified: true });
+    const roomId = ci.rooms[0].roomId!;
+    await checkOut({
+      reservationId: first.id,
+      payment: { amount: "630.00", source: "HOTEL_CASH", collectionMethod: "HOTEL_COLLECTED" },
+    });
+    await db.room.update({ where: { id: roomId }, data: { status: "AVAILABLE" } });
+
+    const second = await arrivingToday(w, 1);
+    const again = await checkIn({
+      reservationId: second.id,
+      guestVerified: true,
+      assignments: { [second.rooms[0].id]: roomId },
+      deposit: { amount: "100.00", source: "HOTEL_CARD", collectionMethod: "HOTEL_COLLECTED" },
+    });
+    expect(again.status).toBe("CHECKED_IN");
+    expect(again.rooms[0].roomId).toBe(roomId);
+    const payment = await db.payment.findFirstOrThrow({ where: { reservationId: second.id } });
+    expect(payment.source).toBe("HOTEL_CARD");
+    expect(payment.amount.toString()).toBe("100");
+  });
+
   it("counts a check-in payment and requires the rest at check-out", async () => {
     const w = await createWorld({ rooms: 1, taxRate: "5" });
     const r = await arrivingToday(w, 2);

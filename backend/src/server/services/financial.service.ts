@@ -408,7 +408,7 @@ export async function recordRefund(
       category: "CASH",
       amount: amount.negated(),
       currency: payment.currency,
-      description: `Refund: ${args.reason}`,
+      description: `Refund (${payment.source}): ${args.reason}`,
       scope: "CASH",
       createdById: args.userId,
     });

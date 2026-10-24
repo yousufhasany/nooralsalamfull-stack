@@ -58,6 +58,10 @@ export function toSafeMessage(e: unknown): { code: ErrorCode; message: string; f
     const field = typeof e.details?.field === "string" ? e.details.field : undefined;
     return { code: e.code, message: e.message, field };
   }
+  const text = e instanceof Error ? e.message : "";
+  if (text.includes("ReservationRoom_no_room_overlap")) {
+    return { code: "ROOM_UNAVAILABLE", message: "That room is still held by another stay. Choose a different room." };
+  }
   const unique = uniqueViolationFields(e);
   if (unique) {
     const field = unique.find((f) => f !== "hotelId");

@@ -137,6 +137,15 @@ export async function setRoomStatus(input: SetRoomStatusInput, tx?: Tx) {
       await closeOpenBlocks(t, room.id, today);
     }
 
+    let releasedCheckedOut = false;
+    if (input.status === "AVAILABLE") {
+      const released = await t.reservationRoom.updateMany({
+        where: { roomId: room.id, isBlocking: true, reservation: { status: "CHECKED_OUT" } },
+        data: { isBlocking: false },
+      });
+      releasedCheckedOut = released.count > 0;
+    }
+
     const updated = await t.room.update({ where: { id: room.id }, data: { status: input.status } });
     await t.roomStatusLog.create({ data: { roomId: room.id, fromStatus: room.status, toStatus: input.status, userId: input.userId ?? null, note: input.note ?? "" } });
 
@@ -152,7 +161,7 @@ export async function setRoomStatus(input: SetRoomStatusInput, tx?: Tx) {
       });
     }
     await audit({ userId: input.userId, action: "room.status_changed", entity: "Room", entityId: room.id, before: { status: room.status }, after: { status: input.status, note: input.note } }, t);
-    return { room: updated, changedInventory: entering || leaving };
+    return { room: updated, changedInventory: entering || leaving || releasedCheckedOut };
   };
   const result = tx ? await run(tx) : await db.$transaction(run);
   if (result.changedInventory) {

@@ -9,8 +9,8 @@ import { getHotel, getSettings } from "./settings.service";
  *     sellable physical rooms (active, not blocked by maintenance / out of order)
  *   - reservation-rooms that currently hold inventory on that night
  *
- * Holding statuses: PENDING (unexpired), CONFIRMED, CHECKED_IN. Cancelled / no-show / checked-out
- * reservations flip ReservationRoom.isBlocking to false and thereby release inventory.
+ * Holding statuses: PENDING (unexpired), CONFIRMED, CHECKED_IN. A checked-out stay also holds
+ * the room until housekeeping marks that room Available, then it can be sold again the same night.
  *
  * Stays are half-open ranges [checkIn, checkOut). When the hotel disables same-day turnover, the
  * check-out day is also treated as occupied.
@@ -103,7 +103,7 @@ export async function getAvailability(q: AvailabilityQuery, client: DbOrTx = db)
           ],
         },
       },
-      select: { roomTypeId: true, checkIn: true, checkOut: true },
+      select: { roomTypeId: true, checkIn: true, checkOut: true, room: { select: { status: true } }, reservation: { select: { status: true } } },
     }),
   ]);
 
@@ -123,7 +123,10 @@ export async function getAvailability(q: AvailabilityQuery, client: DbOrTx = db)
       );
       const booked = typeHolds.filter((h) => {
         const end = turnover ? h.checkOut.getTime() : addDaysDate(h.checkOut, 1).getTime();
-        return h.checkIn.getTime() <= t && t < end;
+        if (!(h.checkIn.getTime() <= t && t < end)) return false;
+        // Housekeeping has returned this checked-out room to the floor, so it sells again tonight.
+        if (h.reservation.status === "CHECKED_OUT" && h.room?.status === "AVAILABLE") return false;
+        return true;
       }).length;
       const sellable = total - blockedRoomIds.size;
       return {
@@ -267,7 +270,10 @@ export async function findAssignableRooms(
           checkIn: { lt: end },
           checkOut: { gt: widenedStart },
           ...(args.excludeReservationRoomId ? { id: { not: args.excludeReservationRoomId } } : {}),
-          reservation: { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT"] } },
+          OR: [
+            { reservation: { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] } } },
+            { reservation: { status: "CHECKED_OUT" }, room: { status: { not: "AVAILABLE" } } },
+          ],
         },
       },
     },
@@ -276,10 +282,25 @@ export async function findAssignableRooms(
   return rooms;
 }
 
+/** Housekeeping has returned this room, so the checked-out stay must stop holding the dates. */
+export async function releaseReadyCheckedOutStays(tx: Tx, roomId: string, exceptReservationRoomId?: string) {
+  await tx.reservationRoom.updateMany({
+    where: {
+      roomId,
+      isBlocking: true,
+      ...(exceptReservationRoomId ? { id: { not: exceptReservationRoomId } } : {}),
+      reservation: { status: "CHECKED_OUT" },
+      room: { status: "AVAILABLE" },
+    },
+    data: { isBlocking: false },
+  });
+}
+
 export async function assertRoomFree(tx: Tx, roomId: string, checkIn: DateStr, checkOut: DateStr, excludeReservationRoomId?: string) {
   await lockRooms(tx, [roomId]);
   const room = await tx.room.findUnique({ where: { id: roomId } });
   if (!room || !room.isActive || room.deletedAt) throw new AppError("NOT_FOUND", "Room not found.");
+  if (room.status === "AVAILABLE") await releaseReadyCheckedOutStays(tx, roomId, excludeReservationRoomId);
   const free = await findAssignableRooms(tx, {
     roomTypeId: room.roomTypeId,
     checkIn,
