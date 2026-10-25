@@ -7,6 +7,8 @@ import { adminMessages } from "@/i18n/admin";
 import { fmt } from "@/i18n/dictionary";
 import { formatMoney } from "@/lib/money";
 import { label } from "@/lib/labels";
+import { formatDate } from "@/lib/dates";
+import { Badge, reservationTone } from "@/components/ui/badge";
 import { PageHeader } from "@/components/admin/page-header";
 import { BarList, SparkBars } from "@/components/admin/charts";
 import { AvailableRoomsCard } from "@/components/admin/available-rooms";
@@ -22,6 +24,7 @@ export default async function DashboardPage() {
   const showLedger = can(user, "finance.view");
   const showDeskMoney = showLedger || can(user, "payments.record");
   const showChannels = can(user, "channels.view");
+  const showReservations = can(user, "reservations.view");
   const attentionAllowed: Record<keyof typeof d.needsAttention, boolean> = {
     overbooked: can(user, "reservations.view"),
     channelsNeedingVerification: showChannels,
@@ -74,6 +77,64 @@ export default async function DashboardPage() {
         {showDeskMoney ? <Stat label={t.outstanding} value={money(d.outstandingInHouse)} tone={Number(d.outstandingInHouse) > 0 ? "warn" : "default"} /> : null}
         {showLedger ? <Stat label={t.pendingPayouts} value={money(d.pendingPayouts.net)} hint={fmt(t.recordsCount, { n: d.pendingPayouts.count })} /> : null}
       </div>
+
+      {showReservations ? (
+        <Card className="mt-6">
+          <CardHeader title={`${t.bookedRoomsTitle} · ${d.bookedTonight.length}`} description={t.bookedRoomsIntro} />
+          <CardBody>
+            {d.bookedTonight.length === 0 ? (
+              <p className="text-sm text-ink-500">{t.noBookedRooms}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-start text-xs uppercase text-ink-500">
+                      <th className="py-2 text-start">{t.room}</th>
+                      <th className="py-2 text-start">{t.guest}</th>
+                      <th className="py-2 text-start">{t.checkInDate}</th>
+                      <th className="py-2 text-start">{t.checkOutDate}</th>
+                      <th className="py-2 text-end">{t.nightsBooked}</th>
+                      <th className="py-2 text-end">{t.nightsLeft}</th>
+                      <th className="py-2 text-start">{t.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.bookedTonight.map((b) => (
+                      <tr key={`${b.reservationId}-${b.roomNumber ?? b.roomType.en}`} className="border-t border-sand-200">
+                        <td className="py-2">
+                          <span className="font-semibold tabular-nums">{b.roomNumber ?? t.noRoomAssigned}</span>
+                          <span className="block text-xs text-ink-500">{b.roomType[locale] || b.roomType.en}</span>
+                        </td>
+                        <td className="py-2">
+                          <Link href={`/admin/reservations/${b.reservationId}`} className="hover:underline">
+                            {b.guestName}
+                          </Link>
+                          <span className="block text-xs text-ink-500">{b.reservationNumber}</span>
+                        </td>
+                        <td className="py-2 tabular-nums">{formatDate(b.checkIn, locale)}</td>
+                        <td className="py-2 tabular-nums">{formatDate(b.checkOut, locale)}</td>
+                        <td className="py-2 text-end tabular-nums">{fmt(t.nightsCount, { n: b.nights })}</td>
+                        <td className="py-2 text-end tabular-nums">
+                          {b.nightsLeft > 0 ? (
+                            b.nightsLeft
+                          ) : b.checkOut === d.today ? (
+                            <Badge tone="amber">{t.leavesToday}</Badge>
+                          ) : (
+                            <Badge tone="red">{t.overdueCheckout}</Badge>
+                          )}
+                        </td>
+                        <td className="py-2">
+                          <Badge tone={reservationTone[b.status]}>{label.reservationStatus(b.status, locale)}</Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      ) : null}
 
       {attention.length > 0 ? (
         <Card className="mt-6">

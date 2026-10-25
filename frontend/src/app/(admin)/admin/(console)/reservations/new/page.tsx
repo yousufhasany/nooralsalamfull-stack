@@ -29,7 +29,7 @@ export default async function NewReservationPage({ searchParams }: { searchParam
 
   return (
     <>
-      <PageHeader title="New reservation" description="Phone, walk-in or other staff-created booking. Prices are calculated on the server." />
+      <PageHeader title="New reservation" description="Phone, walk-in or other staff-created booking. Uses the room type price unless you enter a price per night." />
       <Card>
         <CardBody>
           <ActionForm action={createWalkInAction} className="grid gap-4 sm:grid-cols-2">
@@ -68,7 +68,8 @@ export default async function NewReservationPage({ searchParams }: { searchParam
                 <option value="">Select…</option>
                 {roomTypes.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.nameEn} / {r.nameAr}
+                    {r.nameEn} / {r.nameAr} · {r.basePrice.toString()}
+                    {r.weekendPrice != null && !r.weekendPrice.equals(r.basePrice) ? ` (weekend ${r.weekendPrice.toString()})` : ""} {hotel.currency}
                   </option>
                 ))}
               </Select>
@@ -95,6 +96,13 @@ export default async function NewReservationPage({ searchParams }: { searchParam
                   </option>
                 ))}
               </Select>
+            </Field>
+            <Field
+              label={`Price per night (${hotel.currency})`}
+              htmlFor="nightlyPrice"
+              hint="Leave empty to use the room type price. The amount you enter is charged exactly, and VAT is not added to it."
+            >
+              <Input id="nightlyPrice" name="nightlyPrice" type="number" min={0} step="0.01" inputMode="decimal" placeholder="Room type price" />
             </Field>
             <Field label="Check-in" htmlFor="checkIn" required>
               <Input id="checkIn" name="checkIn" type="date" defaultValue={checkIn} required />

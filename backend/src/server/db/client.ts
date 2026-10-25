@@ -37,7 +37,13 @@ function create(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export const db: PrismaClient = globalForPrisma.__prisma ?? create();
+const cached = globalForPrisma.__prisma;
+// After `prisma generate`, dev hot reload brings a new PrismaClient class; a client cached from the old
+// class still has the old schema and rejects new columns, so replace it.
+const current = cached instanceof PrismaClient ? cached : undefined;
+if (cached && !current) void cached.$disconnect().catch(() => undefined);
+
+export const db: PrismaClient = current ?? create();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.__prisma = db;
 

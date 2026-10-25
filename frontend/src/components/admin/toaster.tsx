@@ -57,7 +57,7 @@ export function Toaster({ labels }: { labels: ToastLabels }) {
   }, [pathname]);
 
   return (
-    <div className="toast-stack" aria-live="polite" role="status">
+    <div className="toast-stack no-print" aria-live="polite" role="status">
       {toasts.map((t) => (
         <div key={t.id} className={`toast toast-${t.tone}`} role={t.tone === "danger" ? "alert" : undefined}>
           <div className="min-w-0">

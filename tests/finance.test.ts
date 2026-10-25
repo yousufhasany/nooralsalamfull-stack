@@ -56,6 +56,25 @@ describe("pricing and tax (server-side, decimal-safe)", () => {
     expect(sun.totalAmount.toString()).toBe("300");
   });
 
+  it("a staff price per night replaces the room type price and survives a date change", async () => {
+    const w = await createWorld({ rooms: 2, weekendPrice: "500.00", taxRate: "15" });
+    const today = todayIn("Asia/Riyadh");
+    let friday = addDays(today, 10);
+    while (isoWeekday(friday) !== 5) friday = addDays(friday, 1);
+    const base = { source: "WALK_IN" as const, guest: testGuest("manual"), checkIn: addDays(friday, -1), checkOut: addDays(friday, 1) };
+    await expect(createReservation({ ...base, lines: [{ roomTypeId: w.roomType.id, adults: 1, nightlyPrice: "abc" }] })).rejects.toThrow(/price per night/i);
+
+    const r = await createReservation({ ...base, lines: [{ roomTypeId: w.roomType.id, adults: 1, nightlyPrice: "150" }] });
+    expect(r.roomsSubtotal.toString()).toBe("300");
+    expect(r.taxTotal.toString()).toBe("0");
+    expect(r.totalAmount.toString()).toBe("300");
+
+    const m = await modifyReservation({ reservationId: r.id, checkOut: addDays(friday, 2) });
+    expect(m.roomsSubtotal.toString()).toBe("450");
+    expect(m.taxTotal.toString()).toBe("0");
+    expect(m.totalAmount.toString()).toBe("450");
+  });
+
   it("percent promotion is validated and applied on the server", async () => {
     const w = await createWorld({ rooms: 3 });
     const today = todayIn("Asia/Riyadh");

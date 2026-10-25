@@ -144,6 +144,7 @@ const en = {
   update: "Update",
   noneShort: "None",
   inHouseBadge: "In house",
+  occupiedNoGuest: "No guest is checked in to this room. Set it to Dirty so it can be cleaned and sold again.",
   contentIntro: "Only publish facilities and photos the hotel actually has.",
   facilitiesTitle: "Facilities",
   settingsIntro: "VAT is configurable. Currency is SAR. Timezone is Asia/Riyadh.",
@@ -183,6 +184,17 @@ const en = {
   noRoomsAvailable: "No rooms are available tonight.",
   unassignedNote: "Some bookings of this type have no room number yet, so only {n} of these rooms can be booked.",
   availableNext: "Available rooms (next 14 nights)",
+  bookedRoomsTitle: "Booked rooms",
+  bookedRoomsIntro: "Rooms occupied or expected tonight, with the stay dates and nights booked.",
+  checkInDate: "Check-in",
+  checkOutDate: "Check-out",
+  nightsBooked: "Nights",
+  nightsLeft: "Nights left",
+  nightsCount: "{n} nights",
+  leavesToday: "Leaves today",
+  overdueCheckout: "Check-out overdue",
+  noRoomAssigned: "Not assigned",
+  noBookedRooms: "No rooms are booked tonight.",
 };
 
 const ar: typeof en = {
@@ -331,6 +343,7 @@ const ar: typeof en = {
   update: "تحديث",
   noneShort: "لا شيء",
   inHouseBadge: "نزيل حالي",
+  occupiedNoGuest: "لا يوجد نزيل مسجّل في هذه الغرفة. اجعلها «متسخة» لتُنظَّف وتُباع من جديد.",
   contentIntro: "انشر فقط المرافق والصور الموجودة فعلاً في الفندق.",
   facilitiesTitle: "المرافق",
   settingsIntro: "ضريبة القيمة المضافة قابلة للتعديل. العملة ريال سعودي. المنطقة الزمنية آسيا/الرياض.",
@@ -370,6 +383,17 @@ const ar: typeof en = {
   noRoomsAvailable: "لا توجد غرف متاحة الليلة.",
   unassignedNote: "بعض حجوزات هذا النوع بلا رقم غرفة بعد، لذا يمكن حجز {n} فقط من هذه الغرف.",
   availableNext: "الغرف المتاحة (14 ليلة قادمة)",
+  bookedRoomsTitle: "الغرف المحجوزة",
+  bookedRoomsIntro: "الغرف المشغولة أو المنتظرة الليلة، مع تواريخ الإقامة وعدد الليالي.",
+  checkInDate: "الوصول",
+  checkOutDate: "المغادرة",
+  nightsBooked: "الليالي",
+  nightsLeft: "الليالي المتبقية",
+  nightsCount: "{n} ليالٍ",
+  leavesToday: "يغادر اليوم",
+  overdueCheckout: "تأخر المغادرة",
+  noRoomAssigned: "غير محددة",
+  noBookedRooms: "لا توجد غرف محجوزة الليلة.",
 };
 
 const bn: typeof en = {
@@ -518,6 +542,7 @@ const bn: typeof en = {
   update: "আপডেট",
   noneShort: "কিছু নেই",
   inHouseBadge: "হোটেলে আছেন",
+  occupiedNoGuest: "এই রুমে কোনো অতিথি চেক-ইন করা নেই। রুমটি Dirty করুন, তাহলে পরিষ্কার করে আবার বিক্রি করা যাবে।",
   contentIntro: "হোটেলে যা আছে শুধু সেই সুবিধা ও ছবি প্রকাশ করুন।",
   facilitiesTitle: "সুবিধা",
   settingsIntro: "ভ্যাট পরিবর্তনযোগ্য। মুদ্রা SAR। সময় অঞ্চল এশিয়া/রিয়াদ।",
@@ -557,6 +582,17 @@ const bn: typeof en = {
   noRoomsAvailable: "আজ রাতে কোনো রুম খালি নেই।",
   unassignedNote: "এই ধরনের কিছু বুকিংয়ে এখনো রুম নম্বর নেই, তাই এর মধ্যে মাত্র {n}টি রুম বুক করা যাবে।",
   availableNext: "খালি রুম (পরের ১৪ রাত)",
+  bookedRoomsTitle: "বুক করা রুম",
+  bookedRoomsIntro: "আজ রাতে যেসব রুমে অতিথি আছেন বা আসবেন, থাকার তারিখ ও কত রাত বুক করা আছে সহ।",
+  checkInDate: "চেক-ইন",
+  checkOutDate: "চেক-আউট",
+  nightsBooked: "রাত",
+  nightsLeft: "বাকি রাত",
+  nightsCount: "{n} রাত",
+  leavesToday: "আজ চলে যাবেন",
+  overdueCheckout: "চেক-আউটের সময় পেরিয়ে গেছে",
+  noRoomAssigned: "রুম দেওয়া হয়নি",
+  noBookedRooms: "আজ রাতে কোনো রুম বুক করা নেই।",
 };
 
 const dict = { en, ar, bn };

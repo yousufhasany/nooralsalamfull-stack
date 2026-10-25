@@ -1980,6 +1980,9 @@ input[aria-invalid="true"]:focus, select[aria-invalid="true"]:focus, textarea[ar
   body {
     background: white;
   }
+  #admin-main {
+    padding: 0 !important;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   html {

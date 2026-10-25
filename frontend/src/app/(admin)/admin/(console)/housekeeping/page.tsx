@@ -19,7 +19,7 @@ const groups: RoomStatus[] = ["DIRTY", "CLEANING", "AVAILABLE", "OCCUPIED", "RES
 const next: Record<string, RoomStatus[]> = {
   AVAILABLE: ["DIRTY", "CLEANING", "MAINTENANCE", "OUT_OF_ORDER"],
   RESERVED: ["AVAILABLE", "DIRTY", "CLEANING", "MAINTENANCE", "OUT_OF_ORDER"],
-  OCCUPIED: [],
+  OCCUPIED: ["DIRTY", "MAINTENANCE", "OUT_OF_ORDER"],
   DIRTY: ["CLEANING", "MAINTENANCE", "OUT_OF_ORDER"],
   CLEANING: ["DIRTY", "MAINTENANCE", "OUT_OF_ORDER"],
   MAINTENANCE: ["AVAILABLE", "DIRTY", "CLEANING", "OUT_OF_ORDER"],
@@ -31,7 +31,7 @@ export default async function HousekeepingPage() {
   const hotel = await getHotel();
   const locale = user.locale === "ar" || user.locale === "bn" ? user.locale : "en";
   const t = adminMessages(locale);
-  const [rooms, tasks] = await Promise.all([
+  const [rooms, tasks, inHouse] = await Promise.all([
     db.room.findMany({
       where: { hotelId: hotel.id, isActive: true, deletedAt: null },
       include: { roomType: true },
@@ -44,7 +44,12 @@ export default async function HousekeepingPage() {
       include: { room: true, assignedTo: true },
       orderBy: { createdAt: "asc" },
     }),
+    db.reservationRoom.findMany({
+      where: { roomId: { not: null }, reservation: { status: "CHECKED_IN", deletedAt: null } },
+      select: { roomId: true },
+    }),
   ]);
+  const guestInRoom = new Set(inHouse.map((r) => r.roomId));
 
   return (
     <>
@@ -95,7 +100,9 @@ export default async function HousekeepingPage() {
               <CardHeader title={`${label.roomStatus(status, locale)} (${list.length})`} />
               <CardBody className="space-y-3">
                 {list.length === 0 ? <p className="text-sm text-ink-500">{t.noneShort}</p> : null}
-                {list.map((room) => (
+                {list.map((room) => {
+                  const guestInHouse = status === "OCCUPIED" && guestInRoom.has(room.id);
+                  return (
                   <div key={room.id} className="rounded-xl border border-sand-200 p-3 text-sm">
                     <p className="font-medium">
                       {room.number} · {pick(room.roomType, "name", locale)}
@@ -106,7 +113,7 @@ export default async function HousekeepingPage() {
                         <SubmitButton>{t.uploadPhotos}</SubmitButton>
                       </ActionForm>
                     ) : null}
-                    {can(user, "housekeeping.update") && next[status].length > 0 ? (
+                    {can(user, "housekeeping.update") && next[status].length > 0 && !guestInHouse ? (
                       <ActionForm action={setRoomStatusAction} className="mt-2 flex gap-2">
                         <input type="hidden" name="roomId" value={room.id} />
                         <Select name="status" className="h-9">
@@ -119,9 +126,13 @@ export default async function HousekeepingPage() {
                         <SubmitButton variant="outline">{t.update}</SubmitButton>
                       </ActionForm>
                     ) : null}
-                    {status === "OCCUPIED" ? <Badge tone="blue">{t.inHouseBadge}</Badge> : null}
+                    {guestInHouse ? <Badge tone="blue">{t.inHouseBadge}</Badge> : null}
+                    {status === "OCCUPIED" && !guestInHouse ? (
+                      <p className="mt-2 text-xs text-warn-600">{t.occupiedNoGuest}</p>
+                    ) : null}
                   </div>
-                ))}
+                  );
+                })}
               </CardBody>
             </Card>
           );

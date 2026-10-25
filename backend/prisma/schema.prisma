@@ -1140,6 +1140,8 @@ model ReservationRoom {
   /// [{ date: "2026-06-10", price: "450.00" }, ...] - immutable pricing snapshot.
   nightlyRates  Json
   subtotal      Decimal  @db.Decimal(12, 2)
+  /// Staff-entered price per night. Replaces the room type price, rates and rules whenever this line is priced.
+  priceOverride Decimal? @db.Decimal(12, 2)
   createdAt     DateTime @default(now())
 
   reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)

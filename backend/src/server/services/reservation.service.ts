@@ -21,6 +21,7 @@ import {
   buildQuote,
   findPromotion,
   loadPricingContext,
+  withPriceOverride,
   type PromotionData,
   type QuoteBreakdown,
   type TaxLine,
@@ -49,6 +50,8 @@ export interface RoomLineInput {
   adults: number;
   children?: number;
   quantity?: number;
+  /** Staff-only: price per night for each room on this line, used instead of the room type price. */
+  nightlyPrice?: string | null;
 }
 
 /** Amounts delivered by an OTA. They replace the pricing engine and are never recomputed. */
@@ -134,6 +137,15 @@ interface ExpandedRoom {
   ratePlanId: string | null;
   adults: number;
   children: number;
+  nightlyPrice: string | null;
+}
+
+function parseNightlyPrice(v: string | null | undefined): string | null {
+  if (v == null || v.trim() === "") return null;
+  const s = v.trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) throw new AppError("INVALID_INPUT", "Enter the price per night as a number, for example 150 or 150.50.", { field: "nightlyPrice" });
+  if (D(s).greaterThan(1_000_000)) throw new AppError("INVALID_INPUT", "The price per night is too large.", { field: "nightlyPrice" });
+  return toDb(D(s));
 }
 
 function expandLines(lines: RoomLineInput[]): ExpandedRoom[] {
@@ -141,8 +153,9 @@ function expandLines(lines: RoomLineInput[]): ExpandedRoom[] {
   for (const l of lines) {
     const qty = l.quantity ?? 1;
     if (qty < 1) throw new AppError("INVALID_INPUT", "Room quantity must be at least 1.");
+    const nightlyPrice = parseNightlyPrice(l.nightlyPrice);
     for (let i = 0; i < qty; i++) {
-      out.push({ roomTypeId: l.roomTypeId, ratePlanId: l.ratePlanId ?? null, adults: l.adults, children: l.children ?? 0 });
+      out.push({ roomTypeId: l.roomTypeId, ratePlanId: l.ratePlanId ?? null, adults: l.adults, children: l.children ?? 0, nightlyPrice });
     }
   }
   return out;
@@ -268,14 +281,17 @@ export async function createReservation(input: CreateReservationInput) {
       // group identical lines so the promotion/discount is computed on the subtotal
       const grouped = new Map<string, { room: ExpandedRoom; count: number }>();
       for (const r of rooms) {
-        const key = `${r.roomTypeId}|${r.ratePlanId ?? ""}`;
+        const key = `${r.roomTypeId}|${r.ratePlanId ?? ""}|${r.nightlyPrice ?? ""}`;
         const g = grouped.get(key);
         if (g) g.count++;
         else grouped.set(key, { room: r, count: 1 });
       }
       let idx = 0;
       for (const g of grouped.values()) {
-        const ctx = await loadPricingContext(tx, g.room.roomTypeId, g.room.ratePlanId, input.checkIn, addDays(input.checkOut, -1), pricing.weekendDays);
+        const ctx = withPriceOverride(
+          await loadPricingContext(tx, g.room.roomTypeId, g.room.ratePlanId, input.checkIn, addDays(input.checkOut, -1), pricing.weekendDays),
+          g.room.nightlyPrice,
+        );
         const quote = buildQuote({
           ctx,
           checkIn: input.checkIn,
@@ -283,7 +299,8 @@ export async function createReservation(input: CreateReservationInput) {
           rooms: g.count,
           source: input.source,
           currency: hotel.currency,
-          taxRules: tax.rules,
+          // A price typed by staff is the amount charged. VAT is not added on top of it.
+          taxRules: g.room.nightlyPrice != null ? [] : tax.rules,
           pricesIncludeTax: tax.pricesIncludeTax,
           promotion: promotionForLine(promoBase, idx),
           today,
@@ -350,6 +367,7 @@ export async function createReservation(input: CreateReservationInput) {
             isBlocking: true,
             nightlyRates: r.nightly,
             subtotal: r.subtotal,
+            priceOverride: r.room.nightlyPrice,
           })),
         },
       },
@@ -374,7 +392,15 @@ export async function createReservation(input: CreateReservationInput) {
         action: overbooked ? "reservation.created.overbooked" : "reservation.created",
         entity: "Reservation",
         entityId: reservation.id,
-        after: { number, source: input.source, status: defaultStatus, checkIn: input.checkIn, checkOut: input.checkOut, rooms: rooms.length },
+        after: {
+          number,
+          source: input.source,
+          status: defaultStatus,
+          checkIn: input.checkIn,
+          checkOut: input.checkOut,
+          rooms: rooms.length,
+          ...(rooms.some((r) => r.nightlyPrice) ? { manualNightlyPrices: rooms.map((r) => r.nightlyPrice) } : {}),
+        },
         source: input.auditSource ?? (input.source === "DIRECT_WEBSITE" ? "WEBSITE" : "ADMIN"),
       },
       tx,
@@ -594,7 +620,10 @@ export async function modifyReservation(input: ModifyInput) {
       allowPast: !!external || !!input.allowPastDates || res.status === "CHECKED_IN" || newIn === oldIn,
     });
 
-    const newRooms = res.rooms.map((r) => ({ ...r, newRoomTypeId: input.roomTypeChanges?.[r.id] ?? r.roomTypeId }));
+    const newRooms = res.rooms.map((r) => {
+      const newRoomTypeId = input.roomTypeChanges?.[r.id] ?? r.roomTypeId;
+      return { ...r, newRoomTypeId, priceOverride: newRoomTypeId === r.roomTypeId && r.priceOverride ? toDb(D(r.priceOverride)) : null };
+    });
     const oldTypeIds = res.rooms.map((r) => r.roomTypeId);
     const newTypeIds = newRooms.map((r) => r.newRoomTypeId);
     await lockRoomTypes(tx, [...oldTypeIds, ...newTypeIds]);
@@ -640,13 +669,16 @@ export async function modifyReservation(input: ModifyInput) {
         const quotes: QuoteBreakdown[] = [];
         const grouped = new Map<string, typeof newRooms>();
         for (const r of newRooms) {
-          const key = `${r.newRoomTypeId}|${r.ratePlanId ?? ""}`;
+          const key = `${r.newRoomTypeId}|${r.ratePlanId ?? ""}|${r.priceOverride ?? ""}`;
           grouped.set(key, [...(grouped.get(key) ?? []), r]);
         }
         let idx = 0;
         for (const group of grouped.values()) {
           const first = group[0];
-          const ctx = await loadPricingContext(tx, first.newRoomTypeId, first.ratePlanId, newIn, addDays(newOut, -1), pricing.weekendDays);
+          const ctx = withPriceOverride(
+            await loadPricingContext(tx, first.newRoomTypeId, first.ratePlanId, newIn, addDays(newOut, -1), pricing.weekendDays),
+            first.priceOverride,
+          );
           const quote = buildQuote({
             ctx,
             checkIn: newIn,
@@ -654,7 +686,7 @@ export async function modifyReservation(input: ModifyInput) {
             rooms: group.length,
             source: res.source,
             currency: hotel.currency,
-            taxRules: tax.rules,
+            taxRules: first.priceOverride != null ? [] : tax.rules,
             pricesIncludeTax: tax.pricesIncludeTax,
             promotion: promotionForLine(promoBase, idx),
             today: res.promotion ? today : today,
@@ -682,7 +714,7 @@ export async function modifyReservation(input: ModifyInput) {
         }
         await tx.reservationRoom.update({
           where: { id: u.id },
-          data: { roomTypeId: u.roomTypeId, checkIn: toDate(newIn), checkOut: toDate(newOut), nightlyRates: u.nightly, subtotal: u.subtotal, roomId },
+          data: { roomTypeId: u.roomTypeId, checkIn: toDate(newIn), checkOut: toDate(newOut), nightlyRates: u.nightly, subtotal: u.subtotal, roomId, priceOverride: row.priceOverride },
         });
       }
 

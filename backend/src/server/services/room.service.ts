@@ -72,10 +72,16 @@ async function closeOpenBlocks(tx: Tx, roomId: string, today: string) {
   await tx.roomBlock.updateMany({ where: { roomId, OR: [{ endDate: null }, { endDate: { gt: toDate(today) } }] }, data: { endDate: toDate(today) } });
 }
 
+async function roomHasGuestInHouse(t: Tx, roomId: string) {
+  const n = await t.reservationRoom.count({ where: { roomId, reservation: { status: "CHECKED_IN", deletedAt: null } } });
+  return n > 0;
+}
+
 const ALLOWED_MANUAL: Record<RoomStatus, RoomStatus[]> = {
   AVAILABLE: ["DIRTY", "CLEANING", "MAINTENANCE", "OUT_OF_ORDER", "RESERVED"],
   RESERVED: ["AVAILABLE", "DIRTY", "CLEANING", "MAINTENANCE", "OUT_OF_ORDER"],
-  OCCUPIED: [],
+  /** Only when no checked-in guest holds the room; see setRoomStatus. */
+  OCCUPIED: ["DIRTY", "MAINTENANCE", "OUT_OF_ORDER"],
   DIRTY: ["CLEANING", "MAINTENANCE", "OUT_OF_ORDER"],
   CLEANING: ["DIRTY", "MAINTENANCE", "OUT_OF_ORDER"],
   MAINTENANCE: ["AVAILABLE", "DIRTY", "CLEANING", "OUT_OF_ORDER"],
@@ -106,6 +112,9 @@ export async function setRoomStatus(input: SetRoomStatusInput, tx?: Tx) {
     const privileged = input.system || input.inspectionApproved;
     if (!privileged && !ALLOWED_MANUAL[room.status].includes(input.status)) {
       throw new AppError("INVALID_STATE", `A room cannot be changed from ${room.status} to ${input.status} manually.`);
+    }
+    if (room.status === "OCCUPIED" && !privileged && (await roomHasGuestInHouse(t, room.id))) {
+      throw new AppError("INVALID_STATE", `A guest is checked in to room ${room.number}. Check the guest out at the front desk to release the room.`);
     }
     if (input.status === "AVAILABLE" && (room.status === "DIRTY" || room.status === "CLEANING") && !privileged) {
       throw new AppError("INVALID_STATE", "This room stays unavailable until a manager approves the housekeeping inspection.");

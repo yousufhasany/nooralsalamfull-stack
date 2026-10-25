@@ -162,7 +162,7 @@ export async function checkOut(input: CheckOutInput) {
 export async function changeAssignedRoom(args: { reservationRoomId: string; roomId: string; userId?: string | null }) {
   await db.$transaction(async (tx) => {
     const rr = await tx.reservationRoom.findUnique({ where: { id: args.reservationRoomId }, include: { reservation: true } });
-    if (!rr) throw new AppError("NOT_FOUND", "Reservation room not found.");
+    if (!rr || rr.reservation.deletedAt) throw new AppError("NOT_FOUND", "Reservation room not found.");
     if (!["PENDING", "CONFIRMED", "CHECKED_IN"].includes(rr.reservation.status)) throw new AppError("INVALID_STATE", "This reservation can no longer be changed.");
     const target = await tx.room.findUnique({ where: { id: args.roomId } });
     if (!target) throw new AppError("NOT_FOUND", "Room not found.");

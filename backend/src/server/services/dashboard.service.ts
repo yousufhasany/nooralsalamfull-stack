@@ -1,5 +1,5 @@
 import { db } from "@/server/db/client";
-import { addDays, endOfMonthExclusive, startOfMonth, startOfZonedDay, todayIn, toDate, type DateStr } from "@/lib/dates";
+import { addDays, diffDays, endOfMonthExclusive, fromDate, startOfMonth, startOfZonedDay, todayIn, toDate, type DateStr } from "@/lib/dates";
 import { D, toDb } from "@/lib/money";
 import { findAssignableRooms, getAvailability } from "./availability.service";
 import { getHotel } from "./settings.service";
@@ -14,11 +14,27 @@ export interface AvailableRoomType {
   rooms: { id: string; number: string; floor: number; status: string }[];
 }
 
+export interface BookedRoom {
+  reservationId: string;
+  reservationNumber: string;
+  status: string;
+  guestName: string;
+  roomNumber: string | null;
+  roomType: { en: string; ar: string; bn: string };
+  checkIn: DateStr;
+  checkOut: DateStr;
+  nights: number;
+  /** Nights still to stay from tonight; 0 when the guest is due out today or overdue. */
+  nightsLeft: number;
+}
+
 export interface DashboardData {
   today: DateStr;
   tomorrow: DateStr;
   currency: string;
   availableTonight: { count: number; total: number; byType: AvailableRoomType[] };
+  /** Rooms occupied or expected tonight, plus in-house guests still due to check out. */
+  bookedTonight: BookedRoom[];
   arrivalsToday: number;
   departuresToday: number;
   inHouse: number;
@@ -91,6 +107,7 @@ export async function getDashboard(): Promise<DashboardData> {
     unreadMessages,
     openMods,
     unknownPayment,
+    bookedRows,
   ] = await Promise.all([
     db.reservation.count({ where: { status: "CONFIRMED", checkIn: toDate(today), deletedAt: null } }),
     db.reservation.count({ where: { status: "CHECKED_IN", checkOut: toDate(today), deletedAt: null } }),
@@ -114,7 +131,42 @@ export async function getDashboard(): Promise<DashboardData> {
     db.contactMessage.count({ where: { isRead: false } }),
     db.modificationRequest.count({ where: { status: "OPEN" } }),
     db.reservation.count({ where: { paymentStatus: "INFORMATION_NOT_PROVIDED", status: { in: ["CONFIRMED", "CHECKED_IN"] } } }),
+    db.reservationRoom.findMany({
+      where: {
+        reservation: { deletedAt: null },
+        OR: [
+          { reservation: { status: "CHECKED_IN" } },
+          { reservation: { status: { in: ["CONFIRMED", "PENDING"] } }, isBlocking: true, checkIn: { lte: toDate(today) }, checkOut: { gt: toDate(today) } },
+        ],
+      },
+      select: {
+        checkIn: true,
+        checkOut: true,
+        room: { select: { number: true } },
+        roomType: { select: { nameEn: true, nameAr: true, nameBn: true } },
+        reservation: { select: { id: true, number: true, status: true, guest: { select: { firstName: true, lastName: true } } } },
+      },
+    }),
   ]);
+
+  const bookedTonight: BookedRoom[] = bookedRows
+    .map((r) => {
+      const checkIn = fromDate(r.checkIn);
+      const checkOut = fromDate(r.checkOut);
+      return {
+        reservationId: r.reservation.id,
+        reservationNumber: r.reservation.number,
+        status: r.reservation.status,
+        guestName: `${r.reservation.guest.firstName} ${r.reservation.guest.lastName}`.trim(),
+        roomNumber: r.room?.number ?? null,
+        roomType: { en: r.roomType.nameEn, ar: r.roomType.nameAr, bn: r.roomType.nameBn },
+        checkIn,
+        checkOut,
+        nights: diffDays(checkIn, checkOut),
+        nightsLeft: Math.max(0, diffDays(today, checkOut)),
+      };
+    })
+    .sort((a, b) => (a.roomNumber ?? "\uffff").localeCompare(b.roomNumber ?? "\uffff", undefined, { numeric: true }));
 
   const perNight = new Map<DateStr, { booked: number; sellable: number }>();
   for (const rt of availability) {
@@ -156,6 +208,7 @@ export async function getDashboard(): Promise<DashboardData> {
     tomorrow,
     currency: hotel.currency,
     availableTonight: { count: byType.reduce((a, t) => a + t.sellable, 0), total: roomsTotal, byType },
+    bookedTonight,
     arrivalsToday,
     departuresToday,
     inHouse,

@@ -44,6 +44,19 @@ describe("check-in / check-out", () => {
     await expect(checkIn({ reservationId: r.id, guestVerified: true })).rejects.toThrow(/already/i);
   });
 
+  it("keeps an in-house room occupied but lets housekeeping release one with no guest", async () => {
+    const w = await createWorld({ rooms: 2 });
+    const r = await arrivingToday(w);
+    const ci = await checkIn({ reservationId: r.id, guestVerified: true });
+    const roomId = ci.rooms[0].roomId!;
+    await expect(setRoomStatus({ roomId, status: "DIRTY" })).rejects.toThrow(/checked in/i);
+
+    const stale = w.roomIds.find((id) => id !== roomId)!;
+    await db.room.update({ where: { id: stale }, data: { status: "OCCUPIED" } });
+    await setRoomStatus({ roomId: stale, status: "DIRTY" });
+    expect((await db.room.findUniqueOrThrow({ where: { id: stale } })).status).toBe("DIRTY");
+  });
+
   it("never assigns a dirty room to an arriving guest", async () => {
     const w = await createWorld({ rooms: 1 });
     await db.room.update({ where: { id: w.roomIds[0] }, data: { status: "DIRTY" } });

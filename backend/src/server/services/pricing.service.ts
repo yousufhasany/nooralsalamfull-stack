@@ -331,6 +331,12 @@ export async function loadPricingContext(
   };
 }
 
+/** Price every night at `price`, ignoring weekend prices, dated rates, rate plan and pricing rules. */
+export function withPriceOverride(ctx: PricingContext, price: MoneyInput | null | undefined): PricingContext {
+  if (price == null) return ctx;
+  return { ...ctx, roomType: { ...ctx.roomType, basePrice: price, weekendPrice: null }, ratePlan: null, rates: [], rules: [] };
+}
+
 export async function findPromotion(client: DbOrTx, code: string): Promise<PromotionData | null> {
   const promo = await client.promotion.findUnique({
     where: { code: code.trim().toUpperCase() },

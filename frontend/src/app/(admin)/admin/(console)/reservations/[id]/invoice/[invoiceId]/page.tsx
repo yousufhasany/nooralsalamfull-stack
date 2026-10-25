@@ -1,19 +1,52 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/server/auth/session";
 import { getInvoice } from "@/server/services/invoice.service";
-import { formatMoney } from "@/lib/money";
-import { PrintButton } from "@/components/site/print-button";
+import { D, formatMoney } from "@/lib/money";
+import { BillActions, type BillFile } from "@/components/admin/bill-actions";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string; invoiceId: string }> }) {
   await requirePagePermission("invoices.view");
-  const { invoiceId } = await params;
+  const { id, invoiceId } = await params;
   const invoice = await getInvoice(invoiceId).catch(() => null);
-  if (!invoice) notFound();
+  if (!invoice || invoice.reservationId !== id) notFound();
   const snap = invoice.snapshot;
   const money = (v: unknown) => formatMoney(v as string, invoice.currency, "en");
+  const bill: BillFile = {
+    number: invoice.number,
+    status: invoice.status,
+    hotelName: snap.hotel.nameEn,
+    hotelNameAr: snap.hotel.nameAr,
+    address: snap.hotel.addressEn,
+    phone: snap.hotel.phone,
+    email: snap.hotel.email,
+    vatNumber: snap.hotel.vatNumber ?? "",
+    guest: snap.guest.name,
+    reservation: snap.reservation.number,
+    checkIn: snap.reservation.checkIn,
+    checkOut: snap.reservation.checkOut,
+    items: invoice.items.map((item) => ({
+      description: item.description,
+      quantity: String(item.quantity),
+      unit: money(item.unitPrice),
+      amount: money(item.amount),
+    })),
+    subtotal: money(invoice.subtotal),
+    discount: money(invoice.discountTotal),
+    tax: money(invoice.taxTotal),
+    total: money(invoice.total),
+    paid: money(invoice.paidTotal),
+    balance: money(D(invoice.total).minus(D(invoice.paidTotal))),
+  };
 
   return (
     <div className="mx-auto max-w-3xl bg-white p-8 print:p-0">
+      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3">
+        <Link href={`/admin/reservations/${id}`} className="text-sm text-brand-800 underline">
+          Back to reservation
+        </Link>
+        <BillActions bill={bill} />
+      </div>
       <div className="flex items-start justify-between">
         <div>
           <h1 className="font-display text-3xl text-brand-900">{snap.hotel.nameEn}</h1>
@@ -36,7 +69,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           <p className="text-xs uppercase tracking-wide text-ink-500">Invoice</p>
           <p className="font-semibold">{invoice.number}</p>
           <p className="text-sm text-ink-500">{invoice.status}</p>
-          <PrintButton label="Print" />
         </div>
       </div>
       <dl className="mt-8 grid grid-cols-2 gap-3 text-sm">
@@ -96,7 +128,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         </p>
         <p className="flex justify-between text-ink-500">
           <span>Paid</span>
-          <span className="tabular-nums">{money(invoice.paidTotal)}</span>
+          <span className="tabular-nums">{bill.paid}</span>
+        </p>
+        <p className="flex justify-between font-semibold">
+          <span>Balance</span>
+          <span className="tabular-nums">{bill.balance}</span>
         </p>
       </div>
     </div>

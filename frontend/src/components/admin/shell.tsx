@@ -14,10 +14,10 @@ export function AdminShell({ user, children }: { user: SessionUser; children: Re
 
   return (
     <div dir={dir} lang={locale} className="min-h-screen lg:flex">
-      <a href="#admin-main" className="skip-link">
+      <a href="#admin-main" className="skip-link no-print">
         {t.skip}
       </a>
-      <aside className="bg-brand-950 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col lg:overflow-y-auto">
+      <aside className="no-print bg-brand-950 text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-64 lg:flex-col lg:overflow-y-auto">
         <div className="border-b border-white/10 px-5 py-5">
           <p className="font-display text-lg font-semibold tracking-wide">{t.brand}</p>
           <p className="text-xs text-gold-400">{t.brandAr}</p>
@@ -30,7 +30,7 @@ export function AdminShell({ user, children }: { user: SessionUser; children: Re
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-sand-200 bg-sand-50/90 px-4 py-3 backdrop-blur sm:px-6">
+        <header className="no-print sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-sand-200 bg-sand-50/90 px-4 py-3 backdrop-blur sm:px-6">
           <p className="text-sm text-ink-500 lg:hidden">
             {user.name} · {ROLE_LABELS[user.role][locale]}
           </p>

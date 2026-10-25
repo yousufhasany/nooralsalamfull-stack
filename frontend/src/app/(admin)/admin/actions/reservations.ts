@@ -63,7 +63,7 @@ export async function createWalkInAction(formData: FormData) {
           phone: opt(formData, "phone") ?? "",
           nationality: opt(formData, "nationality") ?? "",
         },
-        lines: [{ roomTypeId, ratePlanId: opt(formData, "ratePlanId"), adults, children, quantity }],
+        lines: [{ roomTypeId, ratePlanId: opt(formData, "ratePlanId"), adults, children, quantity, nightlyPrice: opt(formData, "nightlyPrice") }],
         checkIn: checkInDate,
         checkOut: checkOutDate,
         promotionCode: opt(formData, "promotionCode"),
@@ -201,10 +201,10 @@ export async function checkInAction(formData: FormData) {
 }
 
 export async function checkOutAction(formData: FormData) {
-  return adminAction("reservations.checkout", async (user) => {
-    const id = str(formData, "reservationId");
+  const id = str(formData, "reservationId");
+  const result = await adminAction("reservations.checkout", async (user) => {
     const amt = optAmount(formData, "paymentAmount");
-    await checkOut({
+    return checkOut({
       reservationId: id,
       userId: user.id,
       payment:
@@ -217,8 +217,13 @@ export async function checkOutAction(formData: FormData) {
             }
           : undefined,
     });
-    refresh(id);
   });
+  if (result.ok) {
+    refresh(id);
+    await flash(`Invoice ${result.data.number} issued. Print or download it below.`);
+    redirect(`/admin/reservations/${id}/invoice/${result.data.id}`);
+  }
+  return result;
 }
 
 export async function assignRoomAction(formData: FormData) {
@@ -293,12 +298,14 @@ export async function voidChargeAction(formData: FormData) {
 }
 
 export async function issueInvoiceAction(formData: FormData) {
-  return adminAction("invoices.view", async (user) => {
-    const id = str(formData, "reservationId");
-    const invoice = await generateInvoice(id, user.id);
+  const id = str(formData, "reservationId");
+  const result = await adminAction("invoices.view", async (user) => generateInvoice(id, user.id));
+  if (result.ok) {
     refresh(id);
-    return { invoiceId: invoice.id };
-  });
+    await flash(`Invoice ${result.data.number} issued. Print or download it below.`);
+    redirect(`/admin/reservations/${id}/invoice/${result.data.id}`);
+  }
+  return result;
 }
 
 export async function updateReservationGuestAction(formData: FormData) {
