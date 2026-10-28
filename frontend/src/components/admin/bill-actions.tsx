@@ -21,7 +21,6 @@ export interface BillFile {
   tax: string;
   total: string;
   paid: string;
-  balance: string;
 }
 
 function esc(value: string) {
@@ -87,7 +86,6 @@ export function billDocument(bill: BillFile) {
     <p><span>Tax</span><span>${esc(bill.tax)}</span></p>
     <p class="strong"><span>Total</span><span>${esc(bill.total)}</span></p>
     <p><span>Paid</span><span>${esc(bill.paid)}</span></p>
-    <p class="strong"><span>Balance</span><span>${esc(bill.balance)}</span></p>
   </div>
 </body>
 </html>`;

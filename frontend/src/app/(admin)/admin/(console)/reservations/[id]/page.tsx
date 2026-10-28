@@ -100,7 +100,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           <Card>
-            <CardHeader title="Stay" description={`${label.collection(res.paymentCollection, locale)} · Total ${money(res.totalAmount)} · Paid ${money(res.paidAmount)} · Balance ${money(balance.balance)}`} />
+            <CardHeader title="Stay" description={`${label.collection(res.paymentCollection, locale)} · Total ${money(res.totalAmount)} · Paid ${money(res.paidAmount)}`} />
             <CardBody className="space-y-4">
               <ul className="space-y-3 text-sm">
                 {res.rooms.map((rr) => (
@@ -199,11 +199,8 @@ export default async function ReservationDetailPage({ params }: { params: Promis
                       </Select>
                     </Field>
                   ))}
-                  <p className="text-sm text-ink-600">
-                    Balance due: <strong>{money(balance.balance)}</strong>
-                  </p>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <Field label="Payment now" htmlFor="depositAmount" hint="Added to Payments received today. Leave empty to keep the balance due until check-out.">
+                    <Field label="Payment now" htmlFor="depositAmount" hint="Added to Payments received today. Leave empty to collect the rest at check-out.">
                       <Input id="depositAmount" name="depositAmount" inputMode="decimal" />
                     </Field>
                     <Field label="Method" htmlFor="depositSource">
@@ -224,9 +221,7 @@ export default async function ReservationDetailPage({ params }: { params: Promis
               {res.status === "CHECKED_IN" && can(user, "reservations.checkout") ? (
                 <ActionForm action={checkOutAction} className="space-y-3">
                   <input type="hidden" name="reservationId" value={res.id} />
-                  <p className="text-sm text-ink-600">
-                    Balance due: <strong>{money(balance.balance)}</strong>. The room becomes Dirty after check-out.
-                  </p>
+                  <p className="text-sm text-ink-600">The room becomes Dirty after check-out.</p>
                   {balance.balance.greaterThan(0) ? (
                     <div className="grid gap-3 sm:grid-cols-3">
                       <Field label="Payment" htmlFor="paymentAmount" hint="Required. Added to Payments received today.">

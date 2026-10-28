@@ -74,7 +74,6 @@ export default async function DashboardPage() {
         {showDeskMoney ? <Stat label={t.paymentsToday} value={money(d.paymentsReceivedToday)} /> : null}
         {showDeskMoney ? <Stat label={t.incomeMonth} value={money(d.incomeMonth)} hint={t.incomeMonthHint} /> : null}
         {showDeskMoney ? <Stat label={t.incomeYear} value={money(d.incomeYear)} hint={t.incomeYearHint} /> : null}
-        {showDeskMoney ? <Stat label={t.outstanding} value={money(d.outstandingInHouse)} tone={Number(d.outstandingInHouse) > 0 ? "warn" : "default"} /> : null}
         {showLedger ? <Stat label={t.pendingPayouts} value={money(d.pendingPayouts.net)} hint={fmt(t.recordsCount, { n: d.pendingPayouts.count })} /> : null}
       </div>
 

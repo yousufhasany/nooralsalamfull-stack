@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePagePermission } from "@/server/auth/session";
 import { getInvoice } from "@/server/services/invoice.service";
-import { D, formatMoney } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { BillActions, type BillFile } from "@/components/admin/bill-actions";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string; invoiceId: string }> }) {
@@ -36,7 +36,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     tax: money(invoice.taxTotal),
     total: money(invoice.total),
     paid: money(invoice.paidTotal),
-    balance: money(D(invoice.total).minus(D(invoice.paidTotal))),
   };
 
   return (
@@ -129,10 +128,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
         <p className="flex justify-between text-ink-500">
           <span>Paid</span>
           <span className="tabular-nums">{bill.paid}</span>
-        </p>
-        <p className="flex justify-between font-semibold">
-          <span>Balance</span>
-          <span className="tabular-nums">{bill.balance}</span>
         </p>
       </div>
     </div>
