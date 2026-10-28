@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { existsSync } from "node:fs";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { unlink } from "node:fs/promises";
 import { isIP } from "node:net";
 import path from "node:path";
 import { AppError } from "@/lib/errors";
 import { detectImage, photoMaxBytes } from "@/server/storage/private-files";
+import { db } from "@/server/db/client";
 import { deleteObject, objectStorageConfigured, PUBLIC_BUCKET, publicObjectKey, publicObjectUrl, putObject } from "@/server/storage/object-store";
 
 const IMAGE_FOLDER = ["rooms", "gallery", "hotel"] as const;
@@ -225,21 +226,28 @@ export async function savePublicImage(bytes: Buffer, folder: "rooms" | "gallery"
   const kind = detectPublicImage(bytes);
   if (!kind) throw new AppError("INVALID_INPUT", "Upload a JPEG, PNG, WebP, or AVIF photograph.");
   const name = `${randomUUID()}.${kind.ext}`;
+  const key = `${folder}/${name}`;
+  const mimeType = PUBLIC_MIME[kind.ext] ?? "application/octet-stream";
   if (objectStorageConfigured()) {
-    const key = `${folder}/${name}`;
-    await putObject(PUBLIC_BUCKET, key, bytes, PUBLIC_MIME[kind.ext] ?? "application/octet-stream");
+    await putObject(PUBLIC_BUCKET, key, bytes, mimeType);
     return publicObjectUrl(key);
   }
-  const dir = path.join(/*turbopackIgnore: true*/ publicRoot(), "uploads", folder);
-  await mkdir(/*turbopackIgnore: true*/ dir, { recursive: true });
-  await writeFile(/*turbopackIgnore: true*/ path.join(/*turbopackIgnore: true*/ dir, name), bytes);
-  return `/uploads/${folder}/${name}`;
+  // A deployed site cannot keep a file written to its own disk. Store the photograph and serve /media.
+  await db.storedImage.create({ data: { path: key, mimeType, bytes: Uint8Array.from(bytes) } });
+  return `/media/${key}`;
 }
 
 export async function deletePublicImage(url: string): Promise<void> {
   const objectKey = publicObjectKey(url);
   if (objectKey) {
     await deleteObject(PUBLIC_BUCKET, objectKey).catch(() => undefined);
+    return;
+  }
+  if (url.startsWith("/media/") && !url.includes("..")) {
+    const storedPath = url.slice("/media/".length);
+    if (/^(rooms|gallery|hotel)\/[0-9a-f-]{36}\.(jpg|png|webp|avif)$/i.test(storedPath)) {
+      await db.storedImage.delete({ where: { path: storedPath } }).catch(() => undefined);
+    }
     return;
   }
   if (!url.startsWith("/uploads/") || url.includes("..")) return;

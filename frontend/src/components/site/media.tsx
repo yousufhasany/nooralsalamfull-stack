@@ -27,7 +27,7 @@ export function HotelImage({
   priority?: boolean;
 }) {
   if (!src) return <PlaceholderImage label={placeholderLabel} className={className} />;
-  if (/^https?:\/\//i.test(src)) {
+  if (/^https?:\/\//i.test(src) || src.startsWith("/media/")) {
     return (
       <div className={cn("relative overflow-hidden bg-sand-200", className)}>
         {/* Remote hotel photos are loaded by the browser so the pasted link is shown as-is. */}

@@ -537,6 +537,14 @@ model RoomImage {
   @@index([roomTypeId, sortOrder])
 }
 
+/// A photograph shown on the public site. Kept in the database so a deployed site can still serve it.
+model StoredImage {
+  path      String   @id
+  mimeType  String
+  bytes     Bytes
+  createdAt DateTime @default(now())
+}
+
 model Room {
   id         String     @id @default(cuid())
   hotelId    String
