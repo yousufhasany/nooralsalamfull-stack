@@ -93,7 +93,7 @@ export default async function RoomDetailPage({ params }: Props) {
 
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           <HotelImage src={main?.url} alt={main?.alt || name} placeholderLabel={t.rooms.photoPlaceholder} className="aspect-[16/10] rounded-2xl md:col-span-2 md:row-span-2 md:aspect-auto md:min-h-96" sizes="(min-width: 768px) 66vw, 100vw" priority />
-          {rest.slice(0, 2).map((img) => (
+          {rest.map((img) => (
             <HotelImage key={img.id} src={img.url} alt={img.alt} className="aspect-[16/10] rounded-2xl" sizes="(min-width: 768px) 33vw, 100vw" />
           ))}
         </div>
