@@ -14,6 +14,7 @@ import { BookingSearch } from "@/components/site/booking-search";
 import { RoomCard } from "@/components/site/room-card";
 import { FacilityIcon } from "@/components/site/facility-icon";
 import { HotelJsonLd } from "@/components/site/hotel-jsonld";
+import { HeroVideo } from "@/components/site/hero-video";
 import { Container, SectionHeading } from "@/components/site/sections";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -57,7 +58,7 @@ export default async function HomePage({ params }: Props) {
     <>
       <HotelJsonLd ctx={ctx} locale={locale} />
       <section className="relative -mt-16 min-h-[100svh] overflow-hidden text-white">
-        <Image src={hotel?.heroImageUrl || SITE_PHOTOS.exterior} alt="" fill priority sizes="100vw" className="object-cover object-[center_40%]" />
+        <HeroVideo src="/videos/home-banner.mp4" poster="/photos/home-banner.jpg" />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-brand-950/25 to-brand-950/20" aria-hidden />
         <Container className="relative flex min-h-[100svh] flex-col justify-end pb-36 pt-28">
           <p className="text-sm font-medium uppercase tracking-[0.28em] text-gold-400">{t.home.eyebrow}</p>
