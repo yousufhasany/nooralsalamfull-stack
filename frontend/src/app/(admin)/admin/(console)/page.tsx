@@ -72,8 +72,6 @@ export default async function DashboardPage() {
         <Stat label={t.dirty} value={d.dirtyRooms} tone={d.dirtyRooms ? "warn" : "default"} hint={t.dirtyHint} />
         <Stat label={t.cleaningRooms} value={d.cleaningRooms} tone={d.cleaningRooms ? "warn" : "default"} hint={t.cleaningHint} />
         {showDeskMoney ? <Stat label={t.paymentsToday} value={money(d.paymentsReceivedToday)} /> : null}
-        {showDeskMoney ? <Stat label={t.incomeMonth} value={money(d.incomeMonth)} hint={t.incomeMonthHint} /> : null}
-        {showDeskMoney ? <Stat label={t.incomeYear} value={money(d.incomeYear)} hint={t.incomeYearHint} /> : null}
         {showLedger ? <Stat label={t.pendingPayouts} value={money(d.pendingPayouts.net)} hint={fmt(t.recordsCount, { n: d.pendingPayouts.count })} /> : null}
       </div>
 
