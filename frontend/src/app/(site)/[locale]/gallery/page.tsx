@@ -3,7 +3,7 @@ import Link from "next/link";
 import { localePath, pick, type Locale } from "@/i18n/config";
 import type { Messages } from "@/i18n/messages/en";
 import { pageBasics, first } from "@/server/site-page";
-import { getPublicGallery } from "@/server/services/content.service";
+import { firstGalleryPhoto, getPublicGallery } from "@/server/services/content.service";
 import { SITE_GALLERY, SITE_PHOTOS } from "@/lib/site-photos";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export default async function GalleryPage({ params, searchParams }: Props) {
   const { locale, t } = await pageBasics(params);
   const sp = await searchParams;
   const stored = await getPublicGallery().catch(() => []);
+  const lobby = firstGalleryPhoto(stored, "LOBBY")?.url || SITE_PHOTOS.lobby;
   const labels = t.gallery.categories as Record<string, string>;
   const images =
     stored.length > 0
@@ -32,7 +33,7 @@ export default async function GalleryPage({ params, searchParams }: Props) {
 
   return (
     <>
-      <PageHero title={t.gallery.title} intro={t.gallery.intro} image={SITE_PHOTOS.lobby} />
+      <PageHero title={t.gallery.title} intro={t.gallery.intro} image={lobby} />
       <Container className="mt-10">
         <GalleryGrid locale={locale} t={t} categories={categories} active={active} items={shown} />
       </Container>

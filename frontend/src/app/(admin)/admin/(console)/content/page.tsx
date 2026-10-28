@@ -77,16 +77,22 @@ export default async function ContentPage() {
         </CardBody>
       </Card>
       <Card>
-        <CardHeader title={t.galleryTitle} />
+        <CardHeader
+          title={t.galleryTitle}
+          description="Add your own Exterior, Lobby, Rooms, Facilities, and Hotel pictures. Every picture is shown in the Gallery. Room photos added under Room types are included under Rooms. The home page uses the first picture of each category."
+        />
         <CardBody>
           <ActionForm action={saveGalleryAction} className="mb-6 space-y-3">
             <PhotoField id="gallery-photo" required={false} chooseLabel={t.photoChoose} hint={t.photoHint} />
             <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Category" htmlFor="category">
-              <Select id="category" name="category">
-                {["HOTEL", "ROOMS", "LOBBY", "RESTAURANT", "FACILITIES", "EXTERIOR"].map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
+              <Select id="category" name="category" defaultValue="EXTERIOR">
+                <option value="EXTERIOR">Exterior</option>
+                <option value="LOBBY">Lobby</option>
+                <option value="ROOMS">Rooms</option>
+                <option value="FACILITIES">Facilities</option>
+                <option value="HOTEL">Hotel</option>
+                <option value="RESTAURANT">Restaurant</option>
               </Select>
             </Field>
             <Field label="Image link" htmlFor="url" hint="Optional when you choose a file. https:// is added if you leave it off.">

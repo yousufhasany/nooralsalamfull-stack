@@ -32,9 +32,56 @@ export async function getPublicFacilities() {
   return db.facility.findMany({ where: { hotelId: hotel.id, isActive: true }, orderBy: { sortOrder: "asc" } });
 }
 
-export async function getPublicGallery() {
+const GALLERY_ORDER = ["EXTERIOR", "LOBBY", "ROOMS", "FACILITIES", "HOTEL", "RESTAURANT"] as const;
+
+export type PublicGalleryItem = {
+  id: string;
+  url: string;
+  category: (typeof GALLERY_ORDER)[number];
+  altEn: string;
+  altAr: string;
+  altBn: string;
+  sortOrder: number;
+};
+
+/** Gallery uploads plus every room photograph, so the public gallery shows all of them. */
+export async function getPublicGallery(): Promise<PublicGalleryItem[]> {
   const hotel = await getHotel();
-  return db.galleryImage.findMany({ where: { hotelId: hotel.id, isActive: true }, orderBy: [{ category: "asc" }, { sortOrder: "asc" }] });
+  const [uploaded, roomTypes] = await Promise.all([
+    db.galleryImage.findMany({ where: { hotelId: hotel.id, isActive: true }, orderBy: { sortOrder: "asc" } }),
+    db.roomType.findMany({
+      where: { hotelId: hotel.id, isActive: true, deletedAt: null },
+      orderBy: { sortOrder: "asc" },
+      include: { images: { orderBy: { sortOrder: "asc" } } },
+    }),
+  ]);
+  const items: PublicGalleryItem[] = [
+    ...uploaded.map((img) => ({
+      id: img.id,
+      url: img.url,
+      category: img.category,
+      altEn: img.altEn,
+      altAr: img.altAr,
+      altBn: img.altBn,
+      sortOrder: img.sortOrder,
+    })),
+    ...roomTypes.flatMap((roomType) =>
+      roomType.images.map((img) => ({
+        id: img.id,
+        url: img.url,
+        category: "ROOMS" as const,
+        altEn: img.altEn || roomType.nameEn,
+        altAr: img.altAr || roomType.nameAr,
+        altBn: img.altBn || roomType.nameBn,
+        sortOrder: img.sortOrder,
+      })),
+    ),
+  ];
+  return items.sort((a, b) => GALLERY_ORDER.indexOf(a.category) - GALLERY_ORDER.indexOf(b.category) || a.sortOrder - b.sortOrder);
+}
+
+export function firstGalleryPhoto(items: PublicGalleryItem[], category: PublicGalleryItem["category"]) {
+  return items.find((item) => item.category === category) ?? null;
 }
 
 // ---------------------------------------------------------------------------

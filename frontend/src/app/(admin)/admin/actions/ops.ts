@@ -183,7 +183,7 @@ export async function saveGalleryAction(formData: FormData) {
 export async function deleteGalleryAction(formData: FormData) {
   return adminAction("content.manage", async (user) => {
     await deleteGalleryImage(str(formData, "id"), user.id);
-    refresh("/admin/content");
+    refreshPublicPhotos();
   });
 }
 

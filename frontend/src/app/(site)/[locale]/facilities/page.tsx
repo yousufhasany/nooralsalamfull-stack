@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { pick } from "@/i18n/config";
 import { pageBasics } from "@/server/site-page";
-import { getPublicFacilities } from "@/server/services/content.service";
+import { firstGalleryPhoto, getPublicFacilities, getPublicGallery } from "@/server/services/content.service";
 import { SITE_PHOTOS } from "@/lib/site-photos";
 import { pageMetadata } from "@/lib/seo";
 import { FacilityIcon } from "@/components/site/facility-icon";
@@ -16,10 +16,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function FacilitiesPage({ params }: Props) {
   const { locale, t } = await pageBasics(params);
-  const facilities = await getPublicFacilities().catch(() => []);
+  const [facilities, gallery] = await Promise.all([getPublicFacilities().catch(() => []), getPublicGallery().catch(() => [])]);
+  const cover = firstGalleryPhoto(gallery, "FACILITIES")?.url || SITE_PHOTOS.courtyard;
   return (
     <>
-      <PageHero title={t.facilities.title} intro={t.facilities.intro} image={SITE_PHOTOS.courtyard} />
+      <PageHero title={t.facilities.title} intro={t.facilities.intro} image={cover} />
       <Container className="mt-12">
         {facilities.length === 0 ? (
           <p className="rounded-xl border border-dashed border-sand-300 bg-white p-10 text-center text-ink-500">{t.facilities.empty}</p>

@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { localePath, pick } from "@/i18n/config";
 import { pageBasics, getRoomsWithFromPrice } from "@/server/site-page";
-import { getPublicFacilities } from "@/server/services/content.service";
+import { firstGalleryPhoto, getPublicFacilities, getPublicGallery } from "@/server/services/content.service";
 import { SITE_PHOTOS } from "@/lib/site-photos";
+import { HotelImage } from "@/components/site/media";
 import { pageMetadata } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -31,7 +32,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function HomePage({ params }: Props) {
   const { locale, t, ctx } = await pageBasics(params);
-  const [rooms, facilities] = await Promise.all([getRoomsWithFromPrice(ctx.today), getPublicFacilities().catch(() => [])]);
+  const [rooms, facilities, gallery] = await Promise.all([
+    getRoomsWithFromPrice(ctx.today),
+    getPublicFacilities().catch(() => []),
+    getPublicGallery().catch(() => []),
+  ]);
+  const categoryPhotos = (
+    [
+      ["EXTERIOR", SITE_PHOTOS.exterior],
+      ["LOBBY", SITE_PHOTOS.lobby],
+      ["ROOMS", SITE_PHOTOS.room],
+      ["FACILITIES", SITE_PHOTOS.courtyard],
+      ["HOTEL", SITE_PHOTOS.suite],
+    ] as const
+  ).map(([category, fallback]) => ({
+    src: firstGalleryPhoto(gallery, category)?.url || fallback,
+    label: t.gallery.categories[category],
+  }));
   const hotel = ctx.hotel;
   const name = hotel ? pick(hotel, "name", locale) : t.meta.siteSuffix;
   const tagline = (hotel && pick(hotel, "tagline", locale)) || t.home.fallbackTagline;
@@ -63,15 +80,10 @@ export default async function HomePage({ params }: Props) {
       </Container>
 
       <Container className="mt-20">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          {[
-            { src: SITE_PHOTOS.exterior, label: t.gallery.categories.EXTERIOR },
-            { src: SITE_PHOTOS.deluxe, label: t.nav.rooms },
-            { src: SITE_PHOTOS.family, label: t.gallery.categories.ROOMS },
-            { src: SITE_PHOTOS.suite, label: t.gallery.categories.HOTEL },
-          ].map((photo) => (
-            <figure key={photo.src} className="group relative aspect-[3/4] overflow-hidden rounded-2xl sm:aspect-[4/5]">
-              <Image src={photo.src} alt={photo.label} fill sizes="(min-width: 768px) 25vw, 50vw" className="object-cover transition-transform duration-700 group-hover:scale-105" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5 md:gap-4">
+          {categoryPhotos.map((photo) => (
+            <figure key={photo.label} className="group relative aspect-[3/4] overflow-hidden rounded-2xl sm:aspect-[4/5]">
+              <HotelImage src={photo.src} alt={photo.label} className="absolute inset-0 h-full w-full" sizes="(min-width: 1024px) 20vw, 50vw" />
               <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/80 to-transparent px-4 pb-4 pt-10 text-sm font-medium text-white">
                 {photo.label}
               </figcaption>

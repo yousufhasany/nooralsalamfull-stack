@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { pick } from "@/i18n/config";
 import { fmt } from "@/i18n/dictionary";
 import { pageBasics } from "@/server/site-page";
+import { firstGalleryPhoto, getPublicGallery } from "@/server/services/content.service";
 import { SITE_PHOTOS } from "@/lib/site-photos";
 import { pageMetadata } from "@/lib/seo";
 import { HotelImage } from "@/components/site/media";
@@ -20,10 +21,13 @@ export default async function AboutPage({ params }: Props) {
   const description = h ? pick(h, "description", locale) : "";
   const address = h ? pick(h, "address", locale) : "";
   const policy = ctx.settings ? pick(ctx.settings.booking, "cancellationPolicy", locale) : "";
+  const gallery = await getPublicGallery().catch(() => []);
+  const lobby = firstGalleryPhoto(gallery, "LOBBY")?.url || SITE_PHOTOS.lobby;
+  const exterior = firstGalleryPhoto(gallery, "EXTERIOR")?.url || SITE_PHOTOS.exterior;
 
   return (
     <>
-      <PageHero title={t.about.title} intro={h ? pick(h, "tagline", locale) : undefined} image={SITE_PHOTOS.lobby} />
+      <PageHero title={t.about.title} intro={h ? pick(h, "tagline", locale) : undefined} image={lobby} />
       <Container className="mt-12 grid gap-12 lg:grid-cols-[2fr_1fr]">
         <div>
           {description ? (
@@ -42,7 +46,7 @@ export default async function AboutPage({ params }: Props) {
           </div>
         </div>
         <aside className="h-fit space-y-6">
-          <HotelImage src={SITE_PHOTOS.exterior} alt={t.gallery.categories.EXTERIOR} className="aspect-[4/5] rounded-2xl" sizes="(min-width: 1024px) 30vw, 100vw" />
+          <HotelImage src={exterior} alt={t.gallery.categories.EXTERIOR} className="aspect-[4/5] rounded-2xl" sizes="(min-width: 1024px) 30vw, 100vw" />
           <div className="rounded-2xl border border-sand-200 bg-white p-6 shadow-soft">
           <h2 className="font-display text-xl font-semibold text-brand-900">{t.about.contactTitle}</h2>
           <dl className="mt-4 space-y-4 text-sm">
